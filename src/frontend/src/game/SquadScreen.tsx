@@ -4,6 +4,7 @@ import {
   type OwnedCard,
   type SquadSave,
   getCollection,
+  getFamiliarityPenalty,
   getSquad,
   saveSquad,
 } from "./storage";
@@ -414,16 +415,43 @@ export default function SquadScreen() {
                 >
                   {card ? (
                     <>
-                      <span
-                        style={{
-                          color: RARITY_COLORS[card.rarity],
-                          fontSize: 9,
-                          fontWeight: 900,
-                          lineHeight: 1,
-                        }}
-                      >
-                        {card.ovr}
-                      </span>
+                      {(() => {
+                        const ownedC = collection.find(
+                          (o) => o.cardId === cardId,
+                        );
+                        const penalty = getFamiliarityPenalty(
+                          ownedC?.matchesInSquad ?? 0,
+                        );
+                        return (
+                          <>
+                            <span
+                              style={{
+                                color:
+                                  penalty > 0
+                                    ? "#f97316"
+                                    : RARITY_COLORS[card.rarity],
+                                fontSize: 9,
+                                fontWeight: 900,
+                                lineHeight: 1,
+                              }}
+                            >
+                              {card.ovr - penalty}
+                            </span>
+                            {penalty > 0 && (
+                              <span
+                                style={{
+                                  color: "#f97316",
+                                  fontSize: 6,
+                                  fontWeight: 700,
+                                  lineHeight: 1,
+                                }}
+                              >
+                                -{penalty}
+                              </span>
+                            )}
+                          </>
+                        );
+                      })()}
                       <span
                         style={{
                           color: "white",
@@ -459,6 +487,47 @@ export default function SquadScreen() {
                 >
                   {slot.label}
                 </span>
+                {card &&
+                  (() => {
+                    const ownedC = collection.find((o) => o.cardId === cardId);
+                    const matches = ownedC?.matchesInSquad ?? 0;
+                    const pct = Math.min(matches / 10, 1);
+                    const isFull = matches >= 10;
+                    return (
+                      <div style={{ width: 40, marginTop: 2 }}>
+                        {isFull ? (
+                          <span
+                            style={{
+                              color: "#22c55e",
+                              fontSize: 6,
+                              fontWeight: 800,
+                            }}
+                          >
+                            FAM
+                          </span>
+                        ) : (
+                          <div
+                            style={{
+                              background: "rgba(255,255,255,0.15)",
+                              borderRadius: 2,
+                              height: 3,
+                              width: "100%",
+                            }}
+                          >
+                            <div
+                              style={{
+                                background: "#f97316",
+                                borderRadius: 2,
+                                height: 3,
+                                width: `${pct * 100}%`,
+                                transition: "width 0.3s",
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
               </button>
             );
           })}

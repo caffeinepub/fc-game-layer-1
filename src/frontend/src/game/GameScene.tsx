@@ -22,9 +22,11 @@ import {
   addGems,
   addXP,
   getChallenges,
+  getFamiliarityPenalty,
   getGems,
   getSquad,
   getWeeklyChallenges,
+  incrementSquadFamiliarity,
   saveChallenges,
   saveWeeklyChallenges,
 } from "./storage";
@@ -304,6 +306,7 @@ export default function GameScene() {
       addGems(gems);
       addDailyMatchCoins(coins);
       addXP(xp);
+      incrementSquadFamiliarity();
       setGemsEarned(gems);
       setCoinsEarned(coins);
       setXpEarned(xp);
