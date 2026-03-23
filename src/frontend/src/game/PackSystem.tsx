@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   type OwnedCard,
   addCardsToCollection,
+  addCoins,
   addGems,
   deductGems,
   getChallenges,
@@ -998,6 +999,117 @@ export const ALL_CARDS: PlayerCard[] = [
     team: "FC Legends",
     nation: "Saudi Arabia",
   },
+
+  // Legendary OVR 90
+  {
+    id: "l06",
+    name: "Marco El Fortín",
+    position: "CB",
+    ovr: 90,
+    rarity: "legendary",
+    pac: 78,
+    sho: 52,
+    pas: 79,
+    dri: 74,
+    def: 92,
+    phy: 93,
+    team: "FC Legends",
+    nation: "Spain",
+  },
+  {
+    id: "l07",
+    name: "Yuto Hayabusa",
+    position: "CM",
+    ovr: 90,
+    rarity: "legendary",
+    pac: 82,
+    sho: 76,
+    pas: 91,
+    dri: 88,
+    def: 78,
+    phy: 80,
+    team: "FC Legends",
+    nation: "Japan",
+  },
+  // Legendary OVR 92
+  {
+    id: "l08",
+    name: "Emeka The Wall",
+    position: "CB",
+    ovr: 92,
+    rarity: "legendary",
+    pac: 81,
+    sho: 57,
+    pas: 83,
+    dri: 77,
+    def: 94,
+    phy: 96,
+    team: "FC Legends",
+    nation: "Nigeria",
+  },
+  {
+    id: "l09",
+    name: "Rafael Vendaval",
+    position: "RB",
+    ovr: 92,
+    rarity: "legendary",
+    pac: 95,
+    sho: 70,
+    pas: 86,
+    dri: 89,
+    def: 90,
+    phy: 82,
+    team: "FC Legends",
+    nation: "Brazil",
+  },
+  // Legendary OVR 94
+  {
+    id: "l10",
+    name: "Ivan Stoïkov",
+    position: "CDM",
+    ovr: 94,
+    rarity: "legendary",
+    pac: 82,
+    sho: 68,
+    pas: 87,
+    dri: 84,
+    def: 96,
+    phy: 97,
+    team: "FC Legends",
+    nation: "Bulgaria",
+  },
+  // Legendary OVR 98
+  {
+    id: "l11",
+    name: "Elan Devereux",
+    position: "CAM",
+    ovr: 98,
+    rarity: "legendary",
+    pac: 90,
+    sho: 93,
+    pas: 98,
+    dri: 97,
+    def: 60,
+    phy: 82,
+    team: "FC Legends",
+    nation: "France",
+  },
+  // Legendary OVR 100
+  {
+    id: "l12",
+    name: "Alejandro Infinito",
+    position: "ST",
+    ovr: 100,
+    rarity: "legendary",
+    pac: 98,
+    sho: 99,
+    pas: 88,
+    dri: 97,
+    def: 42,
+    phy: 90,
+    team: "FC Legends",
+    nation: "Argentina",
+  },
 ];
 
 // ─── Pack Definitions ─────────────────────────────────────────────────────────
@@ -1008,7 +1120,7 @@ const PACKS: PackDef[] = [
     name: "Basic Pack",
     cost: 3000,
     cards: 3,
-    dropRates: { common: 80, rare: 18, epic: 2, legendary: 0 },
+    dropRates: { common: 78, rare: 18, epic: 2, legendary: 2 },
     emoji: "📦",
     accent: "#9ca3af",
   },
@@ -1017,7 +1129,7 @@ const PACKS: PackDef[] = [
     name: "Standard Pack",
     cost: 7000,
     cards: 5,
-    dropRates: { common: 60, rare: 28, epic: 10, legendary: 2 },
+    dropRates: { common: 54, rare: 28, epic: 12, legendary: 6 },
     emoji: "🎁",
     accent: "#60a5fa",
   },
@@ -1026,7 +1138,7 @@ const PACKS: PackDef[] = [
     name: "Premium Pack",
     cost: 9000,
     cards: 5,
-    dropRates: { common: 40, rare: 35, epic: 20, legendary: 5 },
+    dropRates: { common: 33, rare: 35, epic: 20, legendary: 12 },
     emoji: "💎",
     accent: "#a855f7",
   },
@@ -1035,7 +1147,7 @@ const PACKS: PackDef[] = [
     name: "Elite Pack",
     cost: 22000,
     cards: 8,
-    dropRates: { common: 15, rare: 40, epic: 35, legendary: 10 },
+    dropRates: { common: 8, rare: 35, epic: 35, legendary: 22 },
     emoji: "👑",
     accent: "#f97316",
   },
@@ -1044,7 +1156,7 @@ const PACKS: PackDef[] = [
     name: "Ultimate Pack",
     cost: 30000,
     cards: 10,
-    dropRates: { common: 0, rare: 30, epic: 45, legendary: 25 },
+    dropRates: { common: 0, rare: 20, epic: 40, legendary: 40 },
     emoji: "🌟",
     accent: "#fbbf24",
   },
@@ -1060,15 +1172,67 @@ function weightedRarityPick(rates: PackDef["dropRates"]): Rarity {
   return "common";
 }
 
-function generatePackCards(pack: PackDef): PlayerCard[] {
+const LEGENDARY_OVR_TIERS = [
+  { ovr: 90, weight: 40 },
+  { ovr: 92, weight: 28 },
+  { ovr: 94, weight: 14 },
+  { ovr: 95, weight: 6 },
+  { ovr: 96, weight: 3.5 },
+  { ovr: 97, weight: 2.5 },
+  { ovr: 98, weight: 2 },
+  { ovr: 100, weight: 1.5 },
+];
+
+function pickLegendaryCard(): PlayerCard {
+  const total = LEGENDARY_OVR_TIERS.reduce((s, t) => s + t.weight, 0);
+  let roll = Math.random() * total;
+  let targetOvr = 90;
+  for (const tier of LEGENDARY_OVR_TIERS) {
+    roll -= tier.weight;
+    if (roll <= 0) {
+      targetOvr = tier.ovr;
+      break;
+    }
+  }
+  const legendaries = ALL_CARDS.filter((c) => c.rarity === "legendary");
+  const exact = legendaries.filter((c) => c.ovr === targetOvr);
+  if (exact.length > 0) return exact[Math.floor(Math.random() * exact.length)];
+  legendaries.sort(
+    (a, b) => Math.abs(a.ovr - targetOvr) - Math.abs(b.ovr - targetOvr),
+  );
+  return legendaries[0];
+}
+
+const PACK_COIN_REWARDS: Record<string, [number, number]> = {
+  basic: [50, 150],
+  standard: [120, 280],
+  premium: [200, 450],
+  elite: [400, 800],
+  ultimate: [700, 1500],
+};
+
+function rollPackCoins(packId: string): number {
+  const [min, max] = PACK_COIN_REWARDS[packId] ?? [50, 100];
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function generatePackCards(pack: PackDef): {
+  cards: PlayerCard[];
+  coins: number;
+} {
   const result: PlayerCard[] = [];
   for (let i = 0; i < pack.cards; i++) {
     const rarity = weightedRarityPick(pack.dropRates);
-    const pool = ALL_CARDS.filter((c) => c.rarity === rarity);
-    const card = pool[Math.floor(Math.random() * pool.length)];
+    let card: PlayerCard;
+    if (rarity === "legendary") {
+      card = pickLegendaryCard();
+    } else {
+      const pool = ALL_CARDS.filter((c) => c.rarity === rarity);
+      card = pool[Math.floor(Math.random() * pool.length)];
+    }
     result.push(card);
   }
-  return result;
+  return { cards: result, coins: rollPackCoins(pack.id) };
 }
 
 // ─── Rarity Styles ───────────────────────────────────────────────────────────
@@ -1088,6 +1252,13 @@ const RARITY_GLOW: Record<Rarity, string> = {
 };
 
 // ─── Card Component ───────────────────────────────────────────────────────────
+
+function getOvrLabel(ovr: number): string {
+  if (ovr >= 90) return "Good";
+  if (ovr >= 80) return "Decent";
+  if (ovr >= 70) return "Bad";
+  return "Worthless";
+}
 
 function CardFace({ card }: { card: PlayerCard }) {
   const color = RARITY_COLORS[card.rarity];
@@ -1159,7 +1330,15 @@ function CardFace({ card }: { card: PlayerCard }) {
 
       {/* OVR */}
       <div style={{ textAlign: "center", zIndex: 1 }}>
-        <div style={{ color, fontSize: 32, fontWeight: 900, lineHeight: 1 }}>
+        <div
+          style={{
+            color,
+            fontSize: 32,
+            fontWeight: 900,
+            lineHeight: 1,
+            textShadow: "none",
+          }}
+        >
           {card.ovr}
         </div>
         <div
@@ -1171,6 +1350,17 @@ function CardFace({ card }: { card: PlayerCard }) {
           }}
         >
           OVR
+        </div>
+        <div
+          style={{
+            color: "rgba(255,255,255,0.35)",
+            fontSize: 8,
+            fontWeight: 700,
+            letterSpacing: "0.06em",
+            marginTop: 1,
+          }}
+        >
+          {getOvrLabel(card.ovr)}
         </div>
       </div>
 
@@ -1263,13 +1453,207 @@ function CardBack() {
   );
 }
 
+// ─── Walkout Animation ────────────────────────────────────────────────────────
+
+function WalkoutScreen({
+  card,
+  onDone,
+}: { card: PlayerCard; onDone: () => void }) {
+  const [phase, setPhase] = useState<"flash" | "slide" | "details" | "done">(
+    "flash",
+  );
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase("slide"), 400);
+    const t2 = setTimeout(() => setPhase("details"), 1200);
+    const t3 = setTimeout(() => {
+      setPhase("done");
+      onDone();
+    }, 3800);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [onDone]);
+
+  const rarityColors: Record<string, string[]> = {
+    legendary: ["#fbbf24", "#f59e0b", "#d97706"],
+    epic: ["#a855f7", "#9333ea", "#7c3aed"],
+    rare: ["#3b82f6", "#2563eb", "#1d4ed8"],
+    common: ["#6b7280", "#4b5563", "#374151"],
+  };
+  const cols = rarityColors[card.rarity] || rarityColors.common;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        background:
+          phase === "flash"
+            ? `radial-gradient(circle at center, ${cols[0]}, ${cols[1]}, #000)`
+            : `linear-gradient(160deg, #0a0a0a 0%, #111 60%, ${cols[2]}44 100%)`,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "background 0.8s ease",
+        overflow: "hidden",
+      }}
+    >
+      {/* Light rays */}
+      {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => (
+        <div
+          key={`ray-${deg}`}
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            width: 3,
+            height: "120vmax",
+            background: `linear-gradient(to bottom, ${cols[0]}88, transparent)`,
+            transform: `translate(-50%, -50%) rotate(${deg}deg)`,
+            transformOrigin: "center top",
+            opacity: phase === "flash" ? 0.6 : 0.15,
+            transition: "opacity 0.8s ease",
+            pointerEvents: "none",
+          }}
+        />
+      ))}
+
+      {/* Rarity label */}
+      <div
+        style={{
+          color: cols[0],
+          fontSize: "clamp(11px, 2.5vw, 14px)",
+          fontWeight: 900,
+          fontFamily: "system-ui, sans-serif",
+          letterSpacing: "0.25em",
+          textTransform: "uppercase",
+          marginBottom: 16,
+          opacity: phase === "details" ? 1 : 0,
+          transform:
+            phase === "details" ? "translateY(0)" : "translateY(-20px)",
+          transition: "all 0.5s ease",
+          textShadow: `0 0 20px ${cols[0]}`,
+        }}
+      >
+        ✦ {card.rarity.toUpperCase()} ✦
+      </div>
+
+      {/* Card with glow */}
+      <div
+        style={{
+          filter: `drop-shadow(0 0 40px ${cols[0]}cc)`,
+          transform:
+            phase === "slide"
+              ? "scale(0.1) translateY(60px)"
+              : phase === "details"
+                ? "scale(1.1) translateY(0)"
+                : "scale(1.1) translateY(0)",
+          opacity: phase === "flash" ? 0 : 1,
+          transition:
+            "transform 0.7s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease",
+        }}
+      >
+        <CardFace card={card} />
+      </div>
+
+      {/* Player info slide-in */}
+      <div
+        style={{
+          marginTop: 28,
+          textAlign: "center",
+          opacity: phase === "details" ? 1 : 0,
+          transform: phase === "details" ? "translateY(0)" : "translateY(30px)",
+          transition: "all 0.6s ease 0.2s",
+        }}
+      >
+        <div
+          style={{
+            color: "white",
+            fontSize: "clamp(22px, 5vw, 38px)",
+            fontWeight: 900,
+            fontFamily: "system-ui, sans-serif",
+            letterSpacing: "-0.02em",
+            textShadow: `0 2px 20px ${cols[0]}88`,
+          }}
+        >
+          {card.name}
+        </div>
+        <div
+          style={{
+            color: cols[0],
+            fontSize: "clamp(13px, 2.5vw, 18px)",
+            fontWeight: 700,
+            fontFamily: "system-ui, sans-serif",
+            marginTop: 6,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+          }}
+        >
+          <span>{card.nation}</span>
+          <span style={{ color: "rgba(255,255,255,0.3)" }}>•</span>
+          <span>{card.position}</span>
+          <span style={{ color: "rgba(255,255,255,0.3)" }}>•</span>
+          <span>{card.team}</span>
+        </div>
+        <div
+          style={{
+            color: "rgba(255,255,255,0.7)",
+            fontSize: "clamp(11px, 2vw, 15px)",
+            fontWeight: 700,
+            fontFamily: "system-ui, sans-serif",
+            marginTop: 8,
+            letterSpacing: "0.05em",
+          }}
+        >
+          OVR {card.ovr}
+        </div>
+      </div>
+
+      {/* Tap to continue */}
+      <button
+        type="button"
+        onClick={() => {
+          setPhase("done");
+          onDone();
+        }}
+        style={{
+          position: "absolute",
+          bottom: 48,
+          background: "rgba(255,255,255,0.08)",
+          border: `1px solid ${cols[0]}55`,
+          borderRadius: 30,
+          color: "rgba(255,255,255,0.6)",
+          fontSize: 13,
+          fontWeight: 700,
+          fontFamily: "system-ui, sans-serif",
+          padding: "10px 28px",
+          cursor: "pointer",
+          opacity: phase === "details" ? 1 : 0,
+          transition: "opacity 0.5s ease 0.5s",
+        }}
+      >
+        Tap to continue
+      </button>
+    </div>
+  );
+}
+
 // ─── Opening Animation ────────────────────────────────────────────────────────
 
 function PackOpeningScreen({
   cards,
   onCollect,
-}: { cards: PlayerCard[]; onCollect: () => void }) {
+  coins,
+}: { cards: PlayerCard[]; onCollect: () => void; coins: number }) {
   const [revealed, setRevealed] = useState(0);
+  const [walkoutCard, setWalkoutCard] = useState<PlayerCard | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -1279,18 +1663,29 @@ function PackOpeningScreen({
           if (timerRef.current) clearInterval(timerRef.current);
           return prev;
         }
+        const nextCard = cards[prev];
+        if (nextCard && nextCard.rarity === "legendary") {
+          if (timerRef.current) clearInterval(timerRef.current);
+          setWalkoutCard(nextCard);
+        }
         return prev + 1;
       });
     }, 500);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [cards.length]);
+  }, [cards]);
 
   const revealAll = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     setRevealed(cards.length);
   };
+
+  if (walkoutCard) {
+    return (
+      <WalkoutScreen card={walkoutCard} onDone={() => setWalkoutCard(null)} />
+    );
+  }
 
   return (
     <div
@@ -1341,7 +1736,17 @@ function PackOpeningScreen({
               padding: 0,
             }}
             onClick={() => {
-              if (revealed <= i) setRevealed(i + 1);
+              if (revealed <= i) {
+                const nextCard = cards[i];
+                if (
+                  (nextCard.rarity === "legendary" ||
+                    nextCard.rarity === "epic") &&
+                  revealed === i
+                ) {
+                  setWalkoutCard(nextCard);
+                }
+                setRevealed(i + 1);
+              }
             }}
           >
             <div
@@ -1403,26 +1808,43 @@ function PackOpeningScreen({
           </button>
         )}
         {revealed >= cards.length && (
-          <button
-            type="button"
-            data-ocid="packs.collect.button"
-            onClick={onCollect}
-            style={{
-              background: "linear-gradient(135deg, #a855f7, #6366f1)",
-              border: "none",
-              borderRadius: 30,
-              color: "white",
-              fontSize: 16,
-              fontWeight: 800,
-              fontFamily: "system-ui, sans-serif",
-              padding: "14px 40px",
-              cursor: "pointer",
-              minHeight: 44,
-              boxShadow: "0 4px 24px rgba(168,85,247,0.4)",
-            }}
-          >
-            Add to Collection ✅
-          </button>
+          <>
+            <div
+              style={{
+                background: "linear-gradient(135deg, #d97706, #15803d)",
+                borderRadius: 30,
+                color: "white",
+                fontSize: 15,
+                fontWeight: 800,
+                fontFamily: "system-ui, sans-serif",
+                padding: "10px 28px",
+                boxShadow: "0 0 18px rgba(217,119,6,0.5)",
+                letterSpacing: "0.02em",
+              }}
+            >
+              +{coins} 🪙 Coins added to your wallet!
+            </div>
+            <button
+              type="button"
+              data-ocid="packs.collect.button"
+              onClick={onCollect}
+              style={{
+                background: "linear-gradient(135deg, #a855f7, #6366f1)",
+                border: "none",
+                borderRadius: 30,
+                color: "white",
+                fontSize: 16,
+                fontWeight: 800,
+                fontFamily: "system-ui, sans-serif",
+                padding: "14px 40px",
+                cursor: "pointer",
+                minHeight: 44,
+                boxShadow: "0 4px 24px rgba(168,85,247,0.4)",
+              }}
+            >
+              Add to Collection ✅
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -1577,6 +1999,7 @@ function PackStore({
   onClose,
 }: { gems: number; onGemsChange: (n: number) => void; onClose: () => void }) {
   const [openingCards, setOpeningCards] = useState<PlayerCard[] | null>(null);
+  const [openingCoins, setOpeningCoins] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [packOpensToday, setPackOpensToday] = useState(getPackOpensToday);
@@ -1593,7 +2016,8 @@ function PackStore({
       return;
     }
     onGemsChange(getGems());
-    const cards = generatePackCards(pack);
+    const { cards, coins: packCoins } = generatePackCards(pack);
+    setOpeningCoins(packCoins);
     setOpeningCards(cards);
   };
 
@@ -1617,6 +2041,7 @@ function PackStore({
       if (wCh.progress >= wCh.target) wCh.done = true;
       saveWeeklyChallenges(ws);
     }
+    addCoins(openingCoins);
     setOpeningCards(null);
   };
 
@@ -1624,6 +2049,7 @@ function PackStore({
     return (
       <PackOpeningScreen
         cards={openingCards}
+        coins={openingCoins}
         onCollect={() => handleCollect(openingCards)}
       />
     );

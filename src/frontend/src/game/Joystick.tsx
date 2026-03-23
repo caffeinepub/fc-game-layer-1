@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { setJoystickDirection } from "./useInput";
 
-const BASE_SIZE = 120;
-const KNOB_SIZE = 56;
+const BASE_SIZE = 155;
+const KNOB_SIZE = 72;
 const MAX_DIST = (BASE_SIZE - KNOB_SIZE) / 2;
 
 export default function Joystick() {

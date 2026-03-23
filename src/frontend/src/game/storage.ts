@@ -3,7 +3,6 @@
 export interface OwnedCard {
   cardId: string;
   duplicates: number;
-  matchesInSquad?: number;
 }
 
 export interface SquadSave {
@@ -141,30 +140,6 @@ export function getCollection(): OwnedCard[] {
 
 export function saveCollection(col: OwnedCard[]): void {
   localStorage.setItem("fc_collection", JSON.stringify(col));
-}
-
-// ─── Familiarity ──────────────────────────────────────────────────────────────
-
-// Returns OVR penalty (0 = fully familiar, up to 8 = brand new)
-export function getFamiliarityPenalty(matchesInSquad: number): number {
-  const FULL_FAMILIAR_MATCHES = 10;
-  const MAX_PENALTY = 8;
-  const matches = Math.min(matchesInSquad, FULL_FAMILIAR_MATCHES);
-  return Math.round(MAX_PENALTY * (1 - matches / FULL_FAMILIAR_MATCHES));
-}
-
-// Call after each match to increment matchesInSquad for all squad slot cardIds
-export function incrementSquadFamiliarity(): void {
-  const squad = getSquad();
-  const col = getCollection();
-  for (const cardId of squad.slots) {
-    if (!cardId) continue;
-    const owned = col.find((c) => c.cardId === cardId);
-    if (owned) {
-      owned.matchesInSquad = (owned.matchesInSquad ?? 0) + 1;
-    }
-  }
-  saveCollection(col);
 }
 
 export function addCardsToCollection(ids: string[]): void {

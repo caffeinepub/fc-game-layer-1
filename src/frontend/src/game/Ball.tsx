@@ -13,6 +13,7 @@ export interface BallHandle {
   getPosition: () => THREE.Vector3;
   getVelocity: () => THREE.Vector3;
   kick: (direction: THREE.Vector3, power: number) => void;
+  carry: (position: THREE.Vector3) => void;
   reset: () => void;
 }
 
@@ -23,7 +24,7 @@ interface BallProps {
 }
 
 const Ball = forwardRef<BallHandle, BallProps>(function Ball(
-  { playerRef, teamRefs, onGoal },
+  { teamRefs, onGoal },
   ref,
 ) {
   const meshRef = useRef<THREE.Mesh>(null!);
@@ -31,6 +32,7 @@ const Ball = forwardRef<BallHandle, BallProps>(function Ball(
   const position = useRef(new THREE.Vector3(0, BALL_RADIUS, 3));
   const lastKickTime = useRef(0);
   const goalScored = useRef(false);
+  const isCarried = useRef(false);
 
   useImperativeHandle(ref, () => ({
     getPosition: () => position.current.clone(),
@@ -39,13 +41,26 @@ const Ball = forwardRef<BallHandle, BallProps>(function Ball(
       const dir = direction.clone().normalize();
       dir.y = 0;
       const impulse = KICK_IMPULSE * (0.5 + power * 0.8);
+      velocity.current.set(0, 0, 0);
       velocity.current.addScaledVector(dir, impulse);
       lastKickTime.current = performance.now();
+      isCarried.current = false;
+    },
+    carry: (pos: THREE.Vector3) => {
+      position.current.set(
+        pos.x,
+        pos.y > BALL_RADIUS ? pos.y : BALL_RADIUS,
+        pos.z,
+      );
+      velocity.current.set(0, 0, 0);
+      isCarried.current = true;
+      if (meshRef.current) meshRef.current.position.copy(position.current);
     },
     reset: () => {
       position.current.set(0, BALL_RADIUS, 0);
       velocity.current.set(0, 0, 0);
       goalScored.current = false;
+      isCarried.current = false;
       if (meshRef.current) meshRef.current.position.copy(position.current);
     },
   }));
@@ -56,25 +71,12 @@ const Ball = forwardRef<BallHandle, BallProps>(function Ball(
 
     const now = performance.now();
 
-    // Player-ball proximity kick
-    const player = playerRef.current;
-    if (player && now - lastKickTime.current > 200) {
-      const playerPos = new THREE.Vector3();
-      player.getWorldPosition(playerPos);
-      playerPos.y = BALL_RADIUS;
-
-      const diff = new THREE.Vector3().subVectors(position.current, playerPos);
-      diff.y = 0;
-      const dist = diff.length();
-
-      if (dist < KICK_RANGE && dist > 0.01) {
-        const dir = diff.normalize();
-        velocity.current.addScaledVector(dir, KICK_IMPULSE);
-        lastKickTime.current = now;
-      }
+    if (isCarried.current) {
+      isCarried.current = false;
+      mesh.position.copy(position.current);
+      return;
     }
 
-    // Team refs proximity deflection (all AI teammates + opponents)
     if (teamRefs) {
       for (const tRef of teamRefs) {
         const tGroup = tRef?.current;
@@ -91,24 +93,20 @@ const Ball = forwardRef<BallHandle, BallProps>(function Ball(
             const dir = diff.normalize();
             velocity.current.addScaledVector(dir, KICK_IMPULSE * 0.7);
             lastKickTime.current = now;
-            break; // only one collision per frame
+            break;
           }
         }
       }
     }
 
-    // Apply friction
     velocity.current.multiplyScalar(FRICTION);
 
-    // Update position
     position.current.x += velocity.current.x * delta;
     position.current.z += velocity.current.z * delta;
     position.current.y = BALL_RADIUS;
 
-    // Goal detection (before boundary bounce)
     if (!goalScored.current) {
       const bz = Math.abs(position.current.z);
-      // Player scores: ball goes into positive X goal (right side)
       if (
         position.current.x > HALF_W &&
         bz < GOAL_WIDTH / 2 &&
@@ -118,7 +116,6 @@ const Ball = forwardRef<BallHandle, BallProps>(function Ball(
         onGoal?.("player");
         return;
       }
-      // AI scores: ball goes into negative X goal (left side)
       if (
         position.current.x < -HALF_W &&
         bz < GOAL_WIDTH / 2 &&
@@ -130,9 +127,8 @@ const Ball = forwardRef<BallHandle, BallProps>(function Ball(
       }
     }
 
-    // Boundary bounce
     const bx = HALF_W - BALL_RADIUS;
-    const bz = HALF_H - BALL_RADIUS;
+    const bz2 = HALF_H - BALL_RADIUS;
 
     if (position.current.x < -bx) {
       position.current.x = -bx;
@@ -142,17 +138,16 @@ const Ball = forwardRef<BallHandle, BallProps>(function Ball(
       velocity.current.x = -Math.abs(velocity.current.x) * BOUNCE_DAMPING;
     }
 
-    if (position.current.z < -bz) {
-      position.current.z = -bz;
+    if (position.current.z < -bz2) {
+      position.current.z = -bz2;
       velocity.current.z = Math.abs(velocity.current.z) * BOUNCE_DAMPING;
-    } else if (position.current.z > bz) {
-      position.current.z = bz;
+    } else if (position.current.z > bz2) {
+      position.current.z = bz2;
       velocity.current.z = -Math.abs(velocity.current.z) * BOUNCE_DAMPING;
     }
 
     mesh.position.copy(position.current);
 
-    // Rolling rotation
     const speed = velocity.current.length();
     if (speed > 0.01) {
       const rollAxis = new THREE.Vector3(

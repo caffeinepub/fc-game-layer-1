@@ -24,8 +24,54 @@ const DIFFICULTY_COLORS: Record<Difficulty, string> = {
   hard: "#f87171",
 };
 
+const JERSEY_KITS = [
+  {
+    id: "blue",
+    name: "FC Blue",
+    primary: "#1565c0",
+    shorts: "#0d47a1",
+    badge: "🔵",
+  },
+  {
+    id: "red",
+    name: "Red United",
+    primary: "#b71c1c",
+    shorts: "#7f0000",
+    badge: "🔴",
+  },
+  {
+    id: "green",
+    name: "Forest FC",
+    primary: "#1b5e20",
+    shorts: "#1a3a1a",
+    badge: "🟢",
+  },
+  {
+    id: "yellow",
+    name: "Gold City",
+    primary: "#f57f17",
+    shorts: "#1a1a1a",
+    badge: "🟡",
+  },
+  {
+    id: "purple",
+    name: "Violet FC",
+    primary: "#6a1b9a",
+    shorts: "#4a148c",
+    badge: "🟣",
+  },
+  {
+    id: "black",
+    name: "Midnight",
+    primary: "#212121",
+    shorts: "#111",
+    badge: "⚫",
+  },
+] as const;
+type JerseyKitId = (typeof JERSEY_KITS)[number]["id"];
+
 interface MainMenuProps {
-  onPlay: (diff: Difficulty) => void;
+  onPlay: (diff: Difficulty, jerseyId: string) => void;
 }
 
 export default function MainMenu({ onPlay }: MainMenuProps) {
@@ -139,19 +185,20 @@ export default function MainMenu({ onPlay }: MainMenuProps) {
               fontFamily: "system-ui, sans-serif",
             }}
           >
-            🏅 {rankName} {rank}
+            {rankName}
           </div>
         </div>
       </div>
 
-      {/* Tab bar */}
+      {/* Tab nav */}
       <div
         style={{
           display: "flex",
-          gap: 6,
-          padding: "8px 16px",
           overflowX: "auto",
+          borderBottom: "1px solid rgba(255,255,255,0.07)",
           scrollbarWidth: "none",
+          padding: "0 8px",
+          gap: 2,
           flexShrink: 0,
         }}
       >
@@ -160,35 +207,28 @@ export default function MainMenu({ onPlay }: MainMenuProps) {
             key={t.id}
             type="button"
             data-ocid={`menu.${t.id}.tab`}
-            onClick={() => {
-              setTab(t.id);
-              refreshCurrency();
-            }}
+            onClick={() => setTab(t.id)}
             style={{
-              background:
-                tab === t.id
-                  ? "rgba(99,179,237,0.18)"
-                  : "rgba(255,255,255,0.05)",
-              border:
-                tab === t.id
-                  ? "1px solid rgba(99,179,237,0.5)"
-                  : "1px solid rgba(255,255,255,0.1)",
-              borderRadius: 30,
-              color: tab === t.id ? "#93c5fd" : "rgba(255,255,255,0.5)",
-              boxShadow:
-                tab === t.id ? "0 0 12px rgba(99,179,237,0.2)" : "none",
+              background: "transparent",
+              border: "none",
+              borderBottom:
+                tab === t.id ? "2px solid #3b82f6" : "2px solid transparent",
+              color: tab === t.id ? "white" : "rgba(255,255,255,0.45)",
+              padding: "12px 14px",
               fontSize: 13,
-              fontWeight: 700,
+              fontWeight: tab === t.id ? 800 : 600,
               fontFamily: "system-ui, sans-serif",
-              padding: "8px 16px",
               cursor: "pointer",
-              minHeight: 44,
               whiteSpace: "nowrap",
-              transition: "all 0.15s",
-              flexShrink: 0,
+              transition: "color 0.15s, border-color 0.15s",
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              minHeight: 44,
             }}
           >
-            {t.emoji} {t.label}
+            <span>{t.emoji}</span>
+            <span>{t.label}</span>
           </button>
         ))}
       </div>
@@ -200,34 +240,18 @@ export default function MainMenu({ onPlay }: MainMenuProps) {
             difficulty={difficulty}
             setDifficulty={setDifficulty}
             onPlay={onPlay}
-            rank={rank}
-            rankName={rankName}
-            coins={coins}
-            gems={gems}
           />
         )}
         {tab === "squad" && <SquadScreen />}
-        {tab === "packs" && (
-          <PackSystem
-            onClose={() => {
-              setTab("play");
-              refreshCurrency();
-            }}
-          />
+        {tab === "packs" && <PackSystem onClose={() => setTab("play")} />}
+        {tab === "market" && (
+          <MarketScreen onCoinsChange={() => refreshCurrency()} />
         )}
-        {tab === "market" && <MarketScreen onCoinsChange={setCoins} />}
-        {tab === "progress" && <ProgressScreen onCoinsChange={setCoins} />}
+        {tab === "progress" && <ProgressScreen />}
         {tab === "events" && (
-          <EventsScreen onTrainingMatch={() => onPlay(difficulty)} />
+          <EventsScreen onTrainingMatch={() => onPlay(difficulty, "blue")} />
         )}
-        {tab === "save" && (
-          <SaveScreen
-            onImported={() => {
-              setTab("play");
-              refreshCurrency();
-            }}
-          />
-        )}
+        {tab === "save" && <SaveScreen onImported={() => refreshCurrency()} />}
       </div>
     </motion.div>
   );
@@ -237,100 +261,61 @@ function PlayTab({
   difficulty,
   setDifficulty,
   onPlay,
-  rank,
-  rankName,
-  coins,
-  gems,
 }: {
   difficulty: Difficulty;
   setDifficulty: (d: Difficulty) => void;
-  onPlay: (d: Difficulty) => void;
-  rank: number;
-  rankName: string;
-  coins: number;
-  gems: number;
+  onPlay: (d: Difficulty, jerseyId: string) => void;
 }) {
+  const [selectedKit, setSelectedKit] = useState<JerseyKitId>("blue");
+
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 24,
-        padding: "32px 20px 40px",
+        gap: 28,
+        padding: "40px 20px",
+        minHeight: 400,
       }}
     >
+      {/* Hero */}
       <motion.div
         initial={{ y: -16, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.05, duration: 0.35 }}
+        transition={{ delay: 0.05, duration: 0.4 }}
         style={{ textAlign: "center" }}
       >
-        <div style={{ fontSize: 56, marginBottom: 8 }}>⚽</div>
+        <div style={{ fontSize: 64, marginBottom: 8 }}>⚽</div>
         <div
           style={{
             color: "white",
-            fontSize: "clamp(22px, 5vw, 40px)",
             fontWeight: 900,
+            fontSize: "clamp(28px, 6vw, 48px)",
             fontFamily: "system-ui, sans-serif",
             letterSpacing: "-0.02em",
           }}
         >
-          Kick Off
+          FC Game
         </div>
         <div
           style={{
-            color: "rgba(255,255,255,0.45)",
-            fontSize: 13,
+            color: "rgba(255,255,255,0.4)",
+            fontSize: 14,
             fontFamily: "system-ui, sans-serif",
-            marginTop: 6,
+            marginTop: 4,
           }}
         >
-          11 vs 11 · 90-second match
+          11v11 Football
         </div>
       </motion.div>
 
-      {/* Quick stats */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1, duration: 0.35 }}
-        style={{
-          display: "flex",
-          gap: 12,
-          flexWrap: "wrap",
-          justifyContent: "center",
-        }}
-      >
-        {[
-          { label: `🏅 ${rankName} ${rank}`, color: "#c084fc" },
-          { label: `🪙 ${coins.toLocaleString()}`, color: "#86efac" },
-          { label: `💎 ${gems.toLocaleString()}`, color: "#fbbf24" },
-        ].map((s) => (
-          <div
-            key={s.label}
-            style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 20,
-              padding: "6px 16px",
-              color: s.color,
-              fontSize: 13,
-              fontWeight: 700,
-              fontFamily: "system-ui, sans-serif",
-            }}
-          >
-            {s.label}
-          </div>
-        ))}
-      </motion.div>
-
-      {/* Difficulty */}
+      {/* Difficulty selector */}
       <motion.div
         initial={{ y: 16, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.15, duration: 0.35 }}
-        style={{ textAlign: "center" }}
+        transition={{ delay: 0.12, duration: 0.35 }}
+        style={{ textAlign: "center", width: "100%", maxWidth: 420 }}
       >
         <div
           style={{
@@ -343,72 +328,155 @@ function PlayTab({
             marginBottom: 12,
           }}
         >
-          Select Difficulty
+          Difficulty
         </div>
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-            justifyContent: "center",
-            flexWrap: "wrap",
-          }}
-        >
+        <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
           {(["easy", "medium", "hard"] as Difficulty[]).map((d) => (
             <button
               key={d}
               type="button"
-              data-ocid={`menu.${d}.button`}
+              data-ocid={`difficulty.${d}.button`}
               onClick={() => setDifficulty(d)}
               style={{
                 background:
                   difficulty === d
                     ? `${DIFFICULTY_COLORS[d]}22`
                     : "rgba(255,255,255,0.05)",
-                border: `2px solid ${difficulty === d ? DIFFICULTY_COLORS[d] : "rgba(255,255,255,0.15)"}`,
-                borderRadius: 16,
-                padding: "14px 24px",
-                cursor: "pointer",
+                border: `2px solid ${
+                  difficulty === d
+                    ? DIFFICULTY_COLORS[d]
+                    : "rgba(255,255,255,0.15)"
+                }`,
+                borderRadius: 12,
+                padding: "10px 20px",
                 color:
                   difficulty === d
                     ? DIFFICULTY_COLORS[d]
                     : "rgba(255,255,255,0.5)",
+                fontSize: 13,
                 fontWeight: 800,
-                fontSize: 15,
                 fontFamily: "system-ui, sans-serif",
-                minWidth: 90,
+                cursor: "pointer",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
                 minHeight: 44,
                 transition: "all 0.15s",
               }}
             >
-              {d === "easy" ? "😊" : d === "medium" ? "⚡" : "💀"}{" "}
-              {d.charAt(0).toUpperCase() + d.slice(1)}
+              {d}
             </button>
           ))}
         </div>
       </motion.div>
 
+      {/* Kit selector */}
+      <motion.div
+        initial={{ y: 16, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.18, duration: 0.35 }}
+        style={{ textAlign: "center", width: "100%", maxWidth: 420 }}
+      >
+        <div
+          style={{
+            color: "rgba(255,255,255,0.5)",
+            fontSize: 11,
+            fontFamily: "system-ui, sans-serif",
+            fontWeight: 700,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            marginBottom: 12,
+          }}
+        >
+          Choose Your Kit
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            justifyContent: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          {JERSEY_KITS.map((kit) => (
+            <button
+              key={kit.id}
+              type="button"
+              data-ocid={`kit.${kit.id}.button`}
+              onClick={() => setSelectedKit(kit.id as JerseyKitId)}
+              style={{
+                background:
+                  selectedKit === kit.id
+                    ? `${kit.primary}33`
+                    : "rgba(255,255,255,0.05)",
+                border:
+                  selectedKit === kit.id
+                    ? `2px solid ${kit.primary}`
+                    : "2px solid rgba(255,255,255,0.12)",
+                borderRadius: 12,
+                padding: "10px 14px",
+                cursor: "pointer",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 6,
+                minWidth: 72,
+                transition: "all 0.15s",
+                minHeight: 44,
+              }}
+            >
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 4,
+                  background: `linear-gradient(160deg, ${kit.primary} 55%, ${kit.shorts} 100%)`,
+                  border:
+                    selectedKit === kit.id
+                      ? "2px solid white"
+                      : "1px solid rgba(255,255,255,0.2)",
+                  flexShrink: 0,
+                }}
+              />
+              <span
+                style={{
+                  color:
+                    selectedKit === kit.id ? "white" : "rgba(255,255,255,0.5)",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  fontFamily: "system-ui, sans-serif",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {kit.name}
+              </span>
+            </button>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Kick Off button */}
       <motion.button
         type="button"
-        data-ocid="menu.kickoff.primary_button"
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.2, duration: 0.35 }}
+        data-ocid="play.primary_button"
+        initial={{ y: 16, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.24, duration: 0.35 }}
         whileHover={{ scale: 1.04 }}
         whileTap={{ scale: 0.97 }}
-        onClick={() => onPlay(difficulty)}
+        onClick={() => onPlay(difficulty, selectedKit)}
         style={{
           background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
           color: "white",
           border: "none",
           borderRadius: 40,
-          padding: "18px 56px",
+          padding: "20px 56px",
           fontSize: 20,
           fontWeight: 900,
           fontFamily: "system-ui, sans-serif",
-          letterSpacing: "0.02em",
+          letterSpacing: "0.04em",
           cursor: "pointer",
-          minHeight: 56,
-          boxShadow: "0 8px 32px rgba(59,130,246,0.4)",
+          minHeight: 44,
+          boxShadow: "0 8px 32px rgba(59,130,246,0.45)",
         }}
       >
         ⚽ Kick Off

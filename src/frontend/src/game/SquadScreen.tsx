@@ -4,7 +4,6 @@ import {
   type OwnedCard,
   type SquadSave,
   getCollection,
-  getFamiliarityPenalty,
   getSquad,
   saveSquad,
 } from "./storage";
@@ -13,6 +12,22 @@ import {
 // Each entry: [col 0-4, row 0-4] normalized 0-1 on pitch (0=top, 1=bottom)
 
 type SlotLayout = { x: number; y: number; label: string };
+
+// ─── Position helpers ─────────────────────────────────────────────────────────
+
+function getPosGroup(pos: string): string {
+  if (pos === "GK") return "GK";
+  if (["CB", "LB", "RB"].includes(pos)) return "DEF";
+  if (["CDM", "CM", "CAM", "LM", "RM"].includes(pos)) return "MID";
+  return "FWD"; // ST, CF, LW, RW
+}
+
+function getOvrLabel(ovr: number): string {
+  if (ovr >= 90) return "Good";
+  if (ovr >= 80) return "Decent";
+  if (ovr >= 70) return "Bad";
+  return "Worthless";
+}
 
 const FORMATIONS: Record<string, SlotLayout[]> = {
   "4-3-3": [
@@ -416,37 +431,34 @@ export default function SquadScreen() {
                   {card ? (
                     <>
                       {(() => {
-                        const ownedC = collection.find(
-                          (o) => o.cardId === cardId,
-                        );
-                        const penalty = getFamiliarityPenalty(
-                          ownedC?.matchesInSquad ?? 0,
-                        );
+                        const slotPos = slot.label;
+                        const outOfPos =
+                          getPosGroup(card.position) !== getPosGroup(slotPos);
+                        const displayOvr = outOfPos ? card.ovr - 5 : card.ovr;
                         return (
                           <>
                             <span
                               style={{
-                                color:
-                                  penalty > 0
-                                    ? "#f97316"
-                                    : RARITY_COLORS[card.rarity],
+                                color: outOfPos
+                                  ? "#ef4444"
+                                  : RARITY_COLORS[card.rarity],
                                 fontSize: 9,
                                 fontWeight: 900,
                                 lineHeight: 1,
                               }}
                             >
-                              {card.ovr - penalty}
+                              {displayOvr}
                             </span>
-                            {penalty > 0 && (
+                            {outOfPos && (
                               <span
                                 style={{
-                                  color: "#f97316",
-                                  fontSize: 6,
+                                  color: "#ef4444",
+                                  fontSize: 5,
                                   fontWeight: 700,
                                   lineHeight: 1,
                                 }}
                               >
-                                -{penalty}
+                                OOP
                               </span>
                             )}
                           </>
@@ -466,6 +478,16 @@ export default function SquadScreen() {
                         }}
                       >
                         {card.name.split(" ")[0]}
+                      </span>
+                      <span
+                        style={{
+                          color: "rgba(255,255,255,0.3)",
+                          fontSize: 5,
+                          fontWeight: 700,
+                          lineHeight: 1,
+                        }}
+                      >
+                        {getOvrLabel(card.ovr)}
                       </span>
                     </>
                   ) : (
@@ -487,47 +509,6 @@ export default function SquadScreen() {
                 >
                   {slot.label}
                 </span>
-                {card &&
-                  (() => {
-                    const ownedC = collection.find((o) => o.cardId === cardId);
-                    const matches = ownedC?.matchesInSquad ?? 0;
-                    const pct = Math.min(matches / 10, 1);
-                    const isFull = matches >= 10;
-                    return (
-                      <div style={{ width: 40, marginTop: 2 }}>
-                        {isFull ? (
-                          <span
-                            style={{
-                              color: "#22c55e",
-                              fontSize: 6,
-                              fontWeight: 800,
-                            }}
-                          >
-                            FAM
-                          </span>
-                        ) : (
-                          <div
-                            style={{
-                              background: "rgba(255,255,255,0.15)",
-                              borderRadius: 2,
-                              height: 3,
-                              width: "100%",
-                            }}
-                          >
-                            <div
-                              style={{
-                                background: "#f97316",
-                                borderRadius: 2,
-                                height: 3,
-                                width: `${pct * 100}%`,
-                                transition: "width 0.3s",
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
               </button>
             );
           })}

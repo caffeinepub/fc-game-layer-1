@@ -1,4 +1,4 @@
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Suspense,
@@ -22,11 +22,8 @@ import {
   addGems,
   addXP,
   getChallenges,
-  getFamiliarityPenalty,
-  getGems,
   getSquad,
   getWeeklyChallenges,
-  incrementSquadFamiliarity,
   saveChallenges,
   saveWeeklyChallenges,
 } from "./storage";
@@ -47,6 +44,15 @@ const DIFFICULTY_COLORS: Record<Difficulty, string> = {
   medium: "#facc15",
   hard: "#f87171",
 };
+
+const JERSEY_KITS = [
+  { id: "blue", name: "FC Blue", primary: "#1565c0", shorts: "#0d47a1" },
+  { id: "red", name: "Red United", primary: "#b71c1c", shorts: "#7f0000" },
+  { id: "green", name: "Forest FC", primary: "#1b5e20", shorts: "#1a3a1a" },
+  { id: "yellow", name: "Gold City", primary: "#f57f17", shorts: "#1a1a1a" },
+  { id: "purple", name: "Violet FC", primary: "#6a1b9a", shorts: "#4a148c" },
+  { id: "black", name: "Midnight", primary: "#212121", shorts: "#111" },
+] as const;
 
 interface Score {
   player: number;
@@ -71,6 +77,33 @@ const BLUE_POSITIONS = [
   new THREE.Vector3(8, 0, 14), // MID R
   new THREE.Vector3(-6, 0, 8), // FWD L
   new THREE.Vector3(6, 0, 8), // FWD R
+];
+
+const BLUE_ROLES: Array<"GK" | "DEF" | "MID" | "FWD"> = [
+  "GK",
+  "DEF",
+  "DEF",
+  "DEF",
+  "DEF",
+  "MID",
+  "MID",
+  "MID",
+  "FWD",
+  "FWD",
+];
+
+const RED_ROLES: Array<"GK" | "DEF" | "MID" | "FWD"> = [
+  "GK",
+  "DEF",
+  "DEF",
+  "DEF",
+  "DEF",
+  "MID",
+  "MID",
+  "MID",
+  "FWD",
+  "FWD",
+  "FWD",
 ];
 
 const RED_POSITIONS = [
@@ -120,6 +153,10 @@ function SceneContent({
   playerNames,
   playerName,
   tacticMultiplier,
+  onAutoSwitch,
+  controlledPosRef,
+  jerseyPrimary,
+  jerseyShorts,
 }: {
   playerRef: React.RefObject<PlayerHandle | null>;
   ballRef: React.RefObject<BallHandle | null>;
@@ -133,8 +170,14 @@ function SceneContent({
   playerNames: string[];
   playerName: string;
   tacticMultiplier: number;
+  onAutoSwitch: (idx: number) => void;
+  controlledPosRef: React.MutableRefObject<THREE.Vector3>;
+  jerseyPrimary: string;
+  jerseyShorts: string;
 }) {
   useInput();
+
+  const lastAutoSwitchRef = useRef(-1);
 
   const allGroupRefs = useMemo(() => {
     return [...blueRefs, ...redRefs].map(
@@ -144,6 +187,56 @@ function SceneContent({
         }) as React.RefObject<THREE.Group | null>,
     );
   }, [blueRefs, redRefs]);
+
+  useFrame(() => {
+    // Update camera target pos
+    if (activePlayerIdx === 0 && playerRef.current) {
+      controlledPosRef.current.copy(playerRef.current.getPosition());
+    } else if (activePlayerIdx > 0) {
+      const r = blueRefs[activePlayerIdx - 1];
+      if (r?.current?.group) {
+        r.current.group.getWorldPosition(controlledPosRef.current);
+      }
+    }
+
+    // Auto-switch to ball possessor
+    if (!ballRef.current) return;
+    const ballPos = ballRef.current.getPosition();
+    ballPos.y = 0;
+
+    const POSSESSION_RADIUS = 2.5;
+    let nearestIdx = -1;
+    let nearestDist = POSSESSION_RADIUS;
+
+    if (playerRef.current) {
+      const p = playerRef.current.getPosition();
+      p.y = 0;
+      const d = p.distanceTo(ballPos);
+      if (d < nearestDist) {
+        nearestIdx = 0;
+        nearestDist = d;
+      }
+    }
+    blueRefs.forEach((r, i) => {
+      if (!r.current?.group) return;
+      const p = new THREE.Vector3();
+      r.current.group.getWorldPosition(p);
+      p.y = 0;
+      const d = p.distanceTo(ballPos);
+      if (d < nearestDist) {
+        nearestIdx = i + 1;
+        nearestDist = d;
+      }
+    });
+
+    if (nearestIdx >= 0 && nearestIdx !== lastAutoSwitchRef.current) {
+      lastAutoSwitchRef.current = nearestIdx;
+      onAutoSwitch(nearestIdx);
+    }
+  });
+
+  const cpuJerseyColor = jerseyPrimary === "#b71c1c" ? "#1565c0" : "#b71c1c";
+  const cpuShortsColor = jerseyPrimary === "#b71c1c" ? "#0d47a1" : "#7f0000";
 
   return (
     <>
@@ -155,6 +248,8 @@ function SceneContent({
         ballRef={ballRef}
         playerName={playerName}
         isAI={activePlayerIdx !== 0}
+        jerseyColor={jerseyPrimary}
+        shortsColor={jerseyShorts}
       />
 
       {/* Blue teammates */}
@@ -162,7 +257,8 @@ function SceneContent({
         <TeamPlayer
           key={`blue-${pos.x}-${pos.z}`}
           ref={blueRefs[i]}
-          color="#1a6ef5"
+          color={jerseyPrimary}
+          shortsColor={jerseyShorts}
           startPos={pos}
           playerRole="teammate"
           ballRef={ballRef}
@@ -172,6 +268,7 @@ function SceneContent({
           playerName={playerNames[i]}
           isControlled={activePlayerIdx > 0 && activePlayerIdx - 1 === i}
           tacticMultiplier={tacticMultiplier}
+          role={BLUE_ROLES[i]}
         />
       ))}
 
@@ -180,13 +277,16 @@ function SceneContent({
         <TeamPlayer
           key={`red-${pos.x}-${pos.z}`}
           ref={redRefs[i]}
-          color="#e53935"
+          color={cpuJerseyColor}
+          shortsColor={cpuShortsColor}
           startPos={pos}
           playerRole="opponent"
           ballRef={ballRef}
           difficulty={difficulty}
           playerScore={playerScore}
           aiScore={aiScore}
+          role={RED_ROLES[i]}
+          opponentRefs={redRefs}
         />
       ))}
 
@@ -200,7 +300,7 @@ function SceneContent({
         teamRefs={allGroupRefs}
         onGoal={onGoal}
       />
-      <FollowCamera playerRef={playerRef} />
+      <FollowCamera controlledPosRef={controlledPosRef} />
     </>
   );
 }
@@ -229,6 +329,9 @@ export default function GameScene() {
   const [coinsEarned, setCoinsEarned] = useState(0);
   const [xpEarned, setXpEarned] = useState(0);
   const [activePlayerIdx, setActivePlayerIdx] = useState(0);
+  const [jerseyPrimary, setJerseyPrimary] = useState("#1565c0");
+  const [jerseyShorts, setJerseyShorts] = useState("#0d47a1");
+  const controlledPosRef = useRef(new THREE.Vector3(0, 0, 15));
   const playerGoalsThisMatch = useRef(0);
 
   // Squad data
@@ -239,7 +342,7 @@ export default function GameScene() {
   // Derive player names from squad slots
   const playerNames = useMemo<string[]>(() => {
     return BLUE_POSITIONS.map((_, i) => {
-      const cardId = squad.slots[i + 1]; // slots[0] = ST (user player), [1..10] = teammates
+      const cardId = squad.slots[i + 1];
       if (cardId) {
         const card = ALL_CARDS.find((c) => c.id === cardId);
         if (card) {
@@ -299,19 +402,17 @@ export default function GameScene() {
       const won = score.player > score.ai;
       const draw = score.player === score.ai;
 
-      const gems = won ? 150 : draw ? 75 : 25;
-      const coins = won ? 200 : draw ? 75 : 25;
+      const gems = won ? 200 : draw ? 75 : 25;
+      const coins = won ? 50 : draw ? 20 : 10;
       const xp = won ? 100 : draw ? 40 : 15;
 
       addGems(gems);
       addDailyMatchCoins(coins);
       addXP(xp);
-      incrementSquadFamiliarity();
       setGemsEarned(gems);
       setCoinsEarned(coins);
       setXpEarned(xp);
 
-      // Challenge tracking
       const cs = getChallenges();
       if (won) {
         const winCh = cs.challenges.find((c) => c.id === "win");
@@ -330,7 +431,6 @@ export default function GameScene() {
       }
       saveChallenges(cs);
 
-      // Weekly challenge tracking
       const ws = getWeeklyChallenges();
       if (won) {
         const wCh = ws.challenges.find((c) => c.id === "win5");
@@ -390,7 +490,14 @@ export default function GameScene() {
     [blueRefs, redRefs],
   );
 
-  const startMatch = useCallback((diff: Difficulty) => {
+  const startMatch = useCallback((diff: Difficulty, jerseyId?: string) => {
+    if (jerseyId) {
+      const kit = JERSEY_KITS.find((k) => k.id === jerseyId);
+      if (kit) {
+        setJerseyPrimary(kit.primary);
+        setJerseyShorts(kit.shorts);
+      }
+    }
     setDifficulty(diff);
     setScore({ player: 0, ai: 0 });
     setTimeLeft(MATCH_DURATION);
@@ -400,6 +507,10 @@ export default function GameScene() {
     setActivePlayerIdx(0);
     playerGoalsThisMatch.current = 0;
     setGameState("playing");
+  }, []);
+
+  const handleAutoSwitch = useCallback((idx: number) => {
+    setActivePlayerIdx(idx);
   }, []);
 
   const playAgain = useCallback(() => {
@@ -413,7 +524,6 @@ export default function GameScene() {
     setGameState("menu");
   }, []);
 
-  // Current active player name for HUD
   const activePlayerName =
     activePlayerIdx === 0
       ? userPlayerName
@@ -449,6 +559,10 @@ export default function GameScene() {
             playerNames={playerNames}
             playerName={userPlayerName}
             tacticMultiplier={tacticMultiplier}
+            onAutoSwitch={handleAutoSwitch}
+            controlledPosRef={controlledPosRef}
+            jerseyPrimary={jerseyPrimary}
+            jerseyShorts={jerseyShorts}
           />
         </Suspense>
       </Canvas>
@@ -707,7 +821,6 @@ export default function GameScene() {
             zIndex: 100,
           }}
         >
-          {/* PASS button */}
           <button
             type="button"
             data-ocid="pass.button"
@@ -744,7 +857,6 @@ export default function GameScene() {
             <span>PASS</span>
           </button>
 
-          {/* SHOOT button */}
           <button
             type="button"
             data-ocid="shoot.button"
@@ -858,7 +970,6 @@ export default function GameScene() {
               overflowY: "auto",
             }}
           >
-            {/* Ambient glow */}
             <div
               style={{
                 position: "absolute",
@@ -879,7 +990,6 @@ export default function GameScene() {
               }}
             />
 
-            {/* FULL TIME label */}
             <motion.div
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -896,7 +1006,6 @@ export default function GameScene() {
               Full Time
             </motion.div>
 
-            {/* Result badge */}
             <motion.div
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -943,7 +1052,6 @@ export default function GameScene() {
                   : "DRAW"}
             </motion.div>
 
-            {/* Score */}
             <motion.div
               initial={{ scale: 0.7, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -982,7 +1090,6 @@ export default function GameScene() {
               </div>
             </motion.div>
 
-            {/* Rewards */}
             <motion.div
               initial={{ scale: 0.6, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
