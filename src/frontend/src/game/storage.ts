@@ -3,6 +3,7 @@
 export interface OwnedCard {
   cardId: string;
   duplicates: number;
+  ovrBoost: number; // 0-7, default 0
 }
 
 export interface SquadSave {
@@ -147,9 +148,42 @@ export function addCardsToCollection(ids: string[]): void {
   for (const cardId of ids) {
     const existing = col.find((c) => c.cardId === cardId);
     if (existing) existing.duplicates++;
-    else col.push({ cardId, duplicates: 1 });
+    else col.push({ cardId, duplicates: 1, ovrBoost: 0 });
   }
   saveCollection(col);
+}
+
+// ─── Chance Tokens ────────────────────────────────────────────────────────────
+
+export function getChanceTokens(): number {
+  return (
+    Number.parseInt(localStorage.getItem("fc_chance_tokens") || "0", 10) || 0
+  );
+}
+
+export function addChanceTokens(n: number): void {
+  localStorage.setItem("fc_chance_tokens", String(getChanceTokens() + n));
+}
+
+export function spendChanceToken(): boolean {
+  const t = getChanceTokens();
+  if (t <= 0) return false;
+  localStorage.setItem("fc_chance_tokens", String(t - 1));
+  return true;
+}
+
+export function getOvrBoost(cardId: string): number {
+  const col = getCollection();
+  return col.find((c) => c.cardId === cardId)?.ovrBoost ?? 0;
+}
+
+export function setOvrBoost(cardId: string, boost: number): void {
+  const col = getCollection();
+  const entry = col.find((c) => c.cardId === cardId);
+  if (entry) {
+    entry.ovrBoost = Math.min(7, Math.max(0, boost));
+    saveCollection(col);
+  }
 }
 
 // ─── Squad ────────────────────────────────────────────────────────────────────
@@ -444,6 +478,7 @@ const SAVE_KEYS = [
   "fc_daily_match_coins",
   "fc_last_login",
   "fc_save_timestamp",
+  "fc_chance_tokens",
 ];
 
 export function exportSaveData(): string {

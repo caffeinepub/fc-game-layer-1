@@ -18,6 +18,7 @@ import Pitch from "./Pitch";
 import Player, { type PlayerHandle } from "./Player";
 import TeamPlayer, { type TeamPlayerHandle } from "./TeamPlayer";
 import {
+  addChanceTokens,
   addDailyMatchCoins,
   addGems,
   addXP,
@@ -328,6 +329,7 @@ export default function GameScene() {
   const [gemsEarned, setGemsEarned] = useState(0);
   const [coinsEarned, setCoinsEarned] = useState(0);
   const [xpEarned, setXpEarned] = useState(0);
+  const [tokensEarned, setTokensEarned] = useState(0);
   const [activePlayerIdx, setActivePlayerIdx] = useState(0);
   const [jerseyPrimary, setJerseyPrimary] = useState("#1565c0");
   const [jerseyShorts, setJerseyShorts] = useState("#0d47a1");
@@ -402,16 +404,19 @@ export default function GameScene() {
       const won = score.player > score.ai;
       const draw = score.player === score.ai;
 
-      const gems = won ? 200 : draw ? 75 : 25;
+      const gems = won ? 300 : draw ? 150 : 100;
       const coins = won ? 50 : draw ? 20 : 10;
       const xp = won ? 100 : draw ? 40 : 15;
+      const tokens = won ? 2 : draw ? 1 : 0;
 
       addGems(gems);
       addDailyMatchCoins(coins);
       addXP(xp);
+      if (tokens > 0) addChanceTokens(tokens);
       setGemsEarned(gems);
       setCoinsEarned(coins);
       setXpEarned(xp);
+      setTokensEarned(tokens);
 
       const cs = getChallenges();
       if (won) {
@@ -504,6 +509,7 @@ export default function GameScene() {
     setGemsEarned(0);
     setCoinsEarned(0);
     setXpEarned(0);
+    setTokensEarned(0);
     setActivePlayerIdx(0);
     playerGoalsThisMatch.current = 0;
     setGameState("playing");
@@ -519,6 +525,7 @@ export default function GameScene() {
     setGemsEarned(0);
     setCoinsEarned(0);
     setXpEarned(0);
+    setTokensEarned(0);
     setActivePlayerIdx(0);
     playerGoalsThisMatch.current = 0;
     setGameState("menu");
@@ -1148,6 +1155,22 @@ export default function GameScene() {
                   }}
                 >
                   +{xpEarned} XP
+                </div>
+              )}
+              {tokensEarned > 0 && (
+                <div
+                  style={{
+                    background: "rgba(251,191,36,0.15)",
+                    border: "1px solid rgba(251,191,36,0.4)",
+                    borderRadius: 20,
+                    padding: "8px 18px",
+                    color: "#fbbf24",
+                    fontSize: 16,
+                    fontWeight: 800,
+                    fontFamily: "system-ui, sans-serif",
+                  }}
+                >
+                  +{tokensEarned} 🎲 Chance Tokens
                 </div>
               )}
             </motion.div>

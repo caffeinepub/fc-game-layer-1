@@ -3,9 +3,13 @@ import { ALL_CARDS, type PlayerCard } from "./PackSystem";
 import {
   type OwnedCard,
   type SquadSave,
+  getChanceTokens,
   getCollection,
+  getOvrBoost,
   getSquad,
   saveSquad,
+  setOvrBoost,
+  spendChanceToken,
 } from "./storage";
 
 // ─── Formation layouts ────────────────────────────────────────────────────────
@@ -91,6 +95,13 @@ const RARITY_COLORS: Record<string, string> = {
   legendary: "#fbbf24",
 };
 
+function getBoostColor(boost: number): string {
+  if (boost >= 7) return "#fbbf24";
+  if (boost >= 5) return "#a855f7";
+  if (boost >= 3) return "#3b82f6";
+  return "#22c55e";
+}
+
 function calcChemistry(squad: SquadSave, cards: PlayerCard[]): number {
   let score = 0;
   const filledCards = squad.slots
@@ -140,6 +151,10 @@ export default function SquadScreen() {
   );
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
   const [saved, setSaved] = useState(false);
+  const [chanceTokens, setChanceTokens] = useState(getChanceTokens);
+  const [toast, setToast] = useState<{ msg: string; success: boolean } | null>(
+    null,
+  );
 
   useEffect(() => {
     setCollection(getCollection());
@@ -164,10 +179,36 @@ export default function SquadScreen() {
   const handleAssign = (cardId: string) => {
     setSquad((prev) => {
       const slots = [...prev.slots];
+      // If card already in another slot, remove it from there first
+      const existingIdx = slots.findIndex((s) => s === cardId);
+      if (existingIdx !== -1 && existingIdx !== activeSlot!) {
+        slots[existingIdx] = null;
+      }
       slots[activeSlot!] = cardId;
       return { ...prev, slots };
     });
     setActiveSlot(null);
+  };
+
+  const showToast = (msg: string, success: boolean) => {
+    setToast({ msg, success });
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  const handleUseToken = (cardId: string) => {
+    const currentBoost = getOvrBoost(cardId);
+    if (getChanceTokens() <= 0 || currentBoost >= 7) return;
+    const spent = spendChanceToken();
+    if (!spent) return;
+    const success = Math.random() < 0.6;
+    if (success) {
+      setOvrBoost(cardId, currentBoost + 1);
+      showToast("⬆️ OVR Boost! +1", true);
+    } else {
+      showToast("Miss! Better luck next time", false);
+    }
+    setChanceTokens(getChanceTokens());
+    setCollection(getCollection());
   };
 
   const handleRemoveSlot = (i: number) => {
@@ -232,6 +273,19 @@ export default function SquadScreen() {
             }}
           >
             ⚡ Chemistry: {chemistry}
+          </div>
+          <div
+            style={{
+              background: "rgba(251,191,36,0.15)",
+              border: "1px solid rgba(251,191,36,0.4)",
+              borderRadius: 20,
+              padding: "5px 14px",
+              color: "#fbbf24",
+              fontSize: 13,
+              fontWeight: 800,
+            }}
+          >
+            🎲 {chanceTokens} Tokens
           </div>
           <button
             type="button"
@@ -388,128 +442,195 @@ export default function SquadScreen() {
             const card = cardId ? ALL_CARDS.find((c) => c.id === cardId) : null;
             const isActive = activeSlot === i;
             return (
-              <button
-                type="button"
+              <div
                 key={`${slot.label}-${i}`}
-                data-ocid={`squad.item.${i + 1}`}
-                onClick={() => handleSlotClick(i)}
-                onDoubleClick={() => handleRemoveSlot(i)}
                 style={{
                   position: "absolute",
                   left: slot.x * pitchW - 28,
                   top: slot.y * pitchH - 28,
                   width: 56,
                   height: 56,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  zIndex: 2,
-                  background: "none",
-                  border: "none",
-                  padding: 0,
                 }}
               >
-                <div
+                <button
+                  type="button"
+                  data-ocid={`squad.item.${i + 1}`}
+                  onClick={() => handleSlotClick(i)}
+                  onDoubleClick={() => handleRemoveSlot(i)}
                   style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
-                    background: card
-                      ? `${RARITY_COLORS[card.rarity]}33`
-                      : "rgba(0,0,0,0.45)",
-                    border: `2px solid ${isActive ? "#22c55e" : card ? RARITY_COLORS[card.rarity] : "rgba(255,255,255,0.3)"}`,
+                    position: "absolute",
+                    inset: 0,
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: 1,
-                    transition: "border-color 0.15s",
+                    cursor: "pointer",
+                    zIndex: 2,
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    width: "100%",
+                    height: "100%",
                   }}
                 >
-                  {card ? (
-                    <>
-                      {(() => {
-                        const slotPos = slot.label;
-                        const outOfPos =
-                          getPosGroup(card.position) !== getPosGroup(slotPos);
-                        const displayOvr = outOfPos ? card.ovr - 5 : card.ovr;
-                        return (
-                          <>
-                            <span
-                              style={{
-                                color: outOfPos
-                                  ? "#ef4444"
-                                  : RARITY_COLORS[card.rarity],
-                                fontSize: 9,
-                                fontWeight: 900,
-                                lineHeight: 1,
-                              }}
-                            >
-                              {displayOvr}
-                            </span>
-                            {outOfPos && (
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: card
+                        ? `${RARITY_COLORS[card.rarity]}33`
+                        : "rgba(0,0,0,0.45)",
+                      border: `2px solid ${isActive ? "#22c55e" : card ? RARITY_COLORS[card.rarity] : "rgba(255,255,255,0.3)"}`,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 1,
+                      transition: "border-color 0.15s",
+                    }}
+                  >
+                    {card ? (
+                      <>
+                        {(() => {
+                          const slotPos = slot.label;
+                          const outOfPos =
+                            getPosGroup(card.position) !== getPosGroup(slotPos);
+                          const displayOvr = outOfPos ? card.ovr - 5 : card.ovr;
+                          return (
+                            <>
                               <span
                                 style={{
-                                  color: "#ef4444",
-                                  fontSize: 5,
-                                  fontWeight: 700,
+                                  color: outOfPos
+                                    ? "#ef4444"
+                                    : RARITY_COLORS[card.rarity],
+                                  fontSize: 9,
+                                  fontWeight: 900,
                                   lineHeight: 1,
                                 }}
                               >
-                                OOP
+                                {displayOvr}
                               </span>
-                            )}
-                          </>
-                        );
-                      })()}
+                              {outOfPos && (
+                                <span
+                                  style={{
+                                    color: "#ef4444",
+                                    fontSize: 5,
+                                    fontWeight: 700,
+                                    lineHeight: 1,
+                                  }}
+                                >
+                                  OOP
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
+                        <span
+                          style={{
+                            color: "white",
+                            fontSize: 7,
+                            fontWeight: 700,
+                            textAlign: "center",
+                            lineHeight: 1.2,
+                            maxWidth: 38,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {card.name.split(" ")[0]}
+                        </span>
+                        <span
+                          style={{
+                            color: "rgba(255,255,255,0.3)",
+                            fontSize: 5,
+                            fontWeight: 700,
+                            lineHeight: 1,
+                          }}
+                        >
+                          {getOvrLabel(card.ovr)}
+                        </span>
+                      </>
+                    ) : (
                       <span
-                        style={{
-                          color: "white",
-                          fontSize: 7,
-                          fontWeight: 700,
-                          textAlign: "center",
-                          lineHeight: 1.2,
-                          maxWidth: 38,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
+                        style={{ color: "rgba(255,255,255,0.4)", fontSize: 18 }}
                       >
-                        {card.name.split(" ")[0]}
+                        +
                       </span>
-                      <span
-                        style={{
-                          color: "rgba(255,255,255,0.3)",
-                          fontSize: 5,
-                          fontWeight: 700,
-                          lineHeight: 1,
-                        }}
-                      >
-                        {getOvrLabel(card.ovr)}
-                      </span>
+                    )}
+                  </div>
+                  <span
+                    style={{
+                      color: "rgba(255,255,255,0.65)",
+                      fontSize: 8,
+                      fontWeight: 800,
+                      marginTop: 1,
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    {slot.label}
+                  </span>
+                </button>
+                {(() => {
+                  if (!cardId) return null;
+                  const boost = getOvrBoost(cardId);
+                  const hasTokens = chanceTokens > 0;
+                  return (
+                    <>
+                      {boost > 0 && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: -4,
+                            right: -4,
+                            background: getBoostColor(boost),
+                            color: "#000",
+                            fontSize: 8,
+                            fontWeight: 900,
+                            padding: "1px 4px",
+                            borderRadius: 6,
+                            zIndex: 10,
+                            pointerEvents: "none",
+                            boxShadow: `0 0 6px ${getBoostColor(boost)}88`,
+                          }}
+                        >
+                          +{boost}
+                        </div>
+                      )}
+                      {hasTokens && boost < 7 && (
+                        <button
+                          type="button"
+                          data-ocid={`squad.token.button.${i + 1}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUseToken(cardId);
+                          }}
+                          title="Use Chance Token"
+                          style={{
+                            position: "absolute",
+                            bottom: -10,
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            background: "rgba(251,191,36,0.9)",
+                            border: "none",
+                            borderRadius: 6,
+                            color: "#000",
+                            fontSize: 8,
+                            fontWeight: 900,
+                            padding: "2px 5px",
+                            cursor: "pointer",
+                            zIndex: 10,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          🎲
+                        </button>
+                      )}
                     </>
-                  ) : (
-                    <span
-                      style={{ color: "rgba(255,255,255,0.4)", fontSize: 18 }}
-                    >
-                      +
-                    </span>
-                  )}
-                </div>
-                <span
-                  style={{
-                    color: "rgba(255,255,255,0.65)",
-                    fontSize: 8,
-                    fontWeight: 800,
-                    marginTop: 1,
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  {slot.label}
-                </span>
-              </button>
+                  );
+                })()}
+              </div>
             );
           })}
         </div>
@@ -659,8 +780,36 @@ export default function SquadScreen() {
           textAlign: "center",
         }}
       >
-        Tap a slot to assign a player · Double-tap to remove
+        Tap a slot to assign a player · Double-tap to remove · 🎲 Use Chance
+        Token to boost OVR
       </div>
+
+      {/* Toast notification */}
+      {toast && (
+        <div
+          data-ocid="squad.toast"
+          style={{
+            position: "fixed",
+            bottom: 80,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: toast.success
+              ? "rgba(34,197,94,0.95)"
+              : "rgba(107,114,128,0.95)",
+            color: "white",
+            padding: "12px 24px",
+            borderRadius: 24,
+            fontSize: 15,
+            fontWeight: 800,
+            fontFamily: "system-ui, sans-serif",
+            zIndex: 9999,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {toast.msg}
+        </div>
+      )}
     </div>
   );
 }

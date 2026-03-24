@@ -35,6 +35,7 @@ export interface PlayerCard {
   id: string;
   name: string;
   position: Position;
+  altPosition?: Position;
   ovr: number;
   rarity: Rarity;
   pac: number;
@@ -1110,6 +1111,288 @@ export const ALL_CARDS: PlayerCard[] = [
     team: "FC Legends",
     nation: "Argentina",
   },
+  // Joker Cards (dual-position players)
+  {
+    id: "j01",
+    name: "Rodrigo Falcão",
+    position: "ST",
+    altPosition: "CF",
+    ovr: 85,
+    rarity: "epic",
+    pac: 88,
+    sho: 86,
+    pas: 77,
+    dri: 84,
+    def: 34,
+    phy: 80,
+    team: "Fluminense",
+    nation: "Brazil",
+  },
+  {
+    id: "j02",
+    name: "Antoine Girard",
+    position: "CM",
+    altPosition: "CAM",
+    ovr: 83,
+    rarity: "epic",
+    pac: 76,
+    sho: 75,
+    pas: 86,
+    dri: 83,
+    def: 68,
+    phy: 72,
+    team: "Paris Saint-Germain B",
+    nation: "France",
+  },
+  {
+    id: "j03",
+    name: "Marco Steinberg",
+    position: "CB",
+    altPosition: "CDM",
+    ovr: 82,
+    rarity: "rare",
+    pac: 70,
+    sho: 52,
+    pas: 72,
+    dri: 67,
+    def: 84,
+    phy: 88,
+    team: "Borussia Dortmund",
+    nation: "Germany",
+  },
+  {
+    id: "j04",
+    name: "Valentino Cruz",
+    position: "LW",
+    altPosition: "CAM",
+    ovr: 87,
+    rarity: "epic",
+    pac: 92,
+    sho: 82,
+    pas: 84,
+    dri: 90,
+    def: 40,
+    phy: 70,
+    team: "River Plate",
+    nation: "Argentina",
+  },
+  {
+    id: "j05",
+    name: "Kwesi Mensah",
+    position: "CDM",
+    altPosition: "CB",
+    ovr: 80,
+    rarity: "rare",
+    pac: 72,
+    sho: 55,
+    pas: 70,
+    dri: 68,
+    def: 82,
+    phy: 86,
+    team: "Asante Kotoko",
+    nation: "Ghana",
+  },
+  {
+    id: "j06",
+    name: "Takashi Mori",
+    position: "RW",
+    altPosition: "ST",
+    ovr: 84,
+    rarity: "epic",
+    pac: 90,
+    sho: 83,
+    pas: 76,
+    dri: 87,
+    def: 38,
+    phy: 71,
+    team: "Kashima Antlers",
+    nation: "Japan",
+  },
+  {
+    id: "j07",
+    name: "Dimitri Papadakis",
+    position: "CAM",
+    altPosition: "CM",
+    ovr: 86,
+    rarity: "epic",
+    pac: 78,
+    sho: 82,
+    pas: 88,
+    dri: 87,
+    def: 55,
+    phy: 73,
+    team: "Olympiakos",
+    nation: "Greece",
+  },
+  {
+    id: "j08",
+    name: "José Pinheiro",
+    position: "LB",
+    altPosition: "LW",
+    ovr: 81,
+    rarity: "rare",
+    pac: 86,
+    sho: 65,
+    pas: 78,
+    dri: 80,
+    def: 80,
+    phy: 74,
+    team: "Sporting CP",
+    nation: "Portugal",
+  },
+  {
+    id: "j09",
+    name: "Samuel Ekwueme",
+    position: "ST",
+    altPosition: "RW",
+    ovr: 88,
+    rarity: "epic",
+    pac: 91,
+    sho: 88,
+    pas: 74,
+    dri: 88,
+    def: 35,
+    phy: 82,
+    team: "Napoli",
+    nation: "Nigeria",
+  },
+  {
+    id: "j10",
+    name: "Álvaro Delgado",
+    position: "CF",
+    altPosition: "CAM",
+    ovr: 91,
+    rarity: "legendary",
+    pac: 86,
+    sho: 90,
+    pas: 87,
+    dri: 92,
+    def: 48,
+    phy: 79,
+    team: "FC Legends",
+    nation: "Spain",
+  },
+  // Extra Legendary Cards (OVR 95-100)
+  {
+    id: "l13",
+    name: "Neymar Estrela",
+    position: "LW",
+    ovr: 97,
+    rarity: "legendary",
+    pac: 96,
+    sho: 91,
+    pas: 89,
+    dri: 98,
+    def: 42,
+    phy: 73,
+    team: "FC Legends",
+    nation: "Brazil",
+  },
+  {
+    id: "l14",
+    name: "Zlatan Der Riese",
+    position: "ST",
+    ovr: 96,
+    rarity: "legendary",
+    pac: 87,
+    sho: 95,
+    pas: 84,
+    dri: 91,
+    def: 44,
+    phy: 95,
+    team: "FC Legends",
+    nation: "Sweden",
+  },
+  {
+    id: "l15",
+    name: "Andres El Maestro",
+    position: "CM",
+    ovr: 98,
+    rarity: "legendary",
+    pac: 84,
+    sho: 85,
+    pas: 98,
+    dri: 95,
+    def: 80,
+    phy: 82,
+    team: "FC Legends",
+    nation: "Spain",
+  },
+  {
+    id: "l16",
+    name: "Gianluigi Il Muro",
+    position: "GK",
+    ovr: 99,
+    rarity: "legendary",
+    pac: 75,
+    sho: 22,
+    pas: 82,
+    dri: 70,
+    def: 99,
+    phy: 93,
+    team: "FC Legends",
+    nation: "Italy",
+  },
+  {
+    id: "l17",
+    name: "Cristiano O Melhor",
+    position: "ST",
+    ovr: 100,
+    rarity: "legendary",
+    pac: 97,
+    sho: 100,
+    pas: 85,
+    dri: 96,
+    def: 40,
+    phy: 95,
+    team: "FC Legends",
+    nation: "Portugal",
+  },
+  {
+    id: "l18",
+    name: "Lionel La Pulga",
+    position: "CF",
+    ovr: 100,
+    rarity: "legendary",
+    pac: 91,
+    sho: 95,
+    pas: 96,
+    dri: 99,
+    def: 38,
+    phy: 74,
+    team: "FC Legends",
+    nation: "Argentina",
+  },
+  {
+    id: "l19",
+    name: "Franz Der Kaiser",
+    position: "CB",
+    ovr: 95,
+    rarity: "legendary",
+    pac: 84,
+    sho: 66,
+    pas: 86,
+    dri: 82,
+    def: 97,
+    phy: 96,
+    team: "FC Legends",
+    nation: "Germany",
+  },
+  {
+    id: "l20",
+    name: "Ronaldinho O Bruxo",
+    position: "CAM",
+    ovr: 99,
+    rarity: "legendary",
+    pac: 88,
+    sho: 92,
+    pas: 96,
+    dri: 99,
+    def: 52,
+    phy: 76,
+    team: "FC Legends",
+    nation: "Brazil",
+  },
 ];
 
 // ─── Pack Definitions ─────────────────────────────────────────────────────────
@@ -1221,15 +1504,29 @@ function generatePackCards(pack: PackDef): {
   coins: number;
 } {
   const result: PlayerCard[] = [];
+  const usedIds = new Set<string>();
   for (let i = 0; i < pack.cards; i++) {
     const rarity = weightedRarityPick(pack.dropRates);
     let card: PlayerCard;
     if (rarity === "legendary") {
       card = pickLegendaryCard();
+      // Re-roll once if duplicate
+      if (usedIds.has(card.id)) {
+        const alt = pickLegendaryCard();
+        if (!usedIds.has(alt.id)) card = alt;
+      }
     } else {
       const pool = ALL_CARDS.filter((c) => c.rarity === rarity);
       card = pool[Math.floor(Math.random() * pool.length)];
+      // Re-roll once if duplicate
+      if (usedIds.has(card.id)) {
+        const altPool = pool.filter((c) => !usedIds.has(c.id));
+        if (altPool.length > 0) {
+          card = altPool[Math.floor(Math.random() * altPool.length)];
+        }
+      }
     }
+    usedIds.add(card.id);
     result.push(card);
   }
   return { cards: result, coins: rollPackCoins(pack.id) };
@@ -1260,9 +1557,17 @@ function getOvrLabel(ovr: number): string {
   return "Worthless";
 }
 
-function CardFace({ card }: { card: PlayerCard }) {
+function getBoostColor(boost: number): string {
+  if (boost >= 7) return "#fbbf24";
+  if (boost >= 5) return "#a855f7";
+  if (boost >= 3) return "#3b82f6";
+  return "#22c55e";
+}
+
+function CardFace({ card, ovrBoost }: { card: PlayerCard; ovrBoost?: number }) {
   const color = RARITY_COLORS[card.rarity];
   const glow = RARITY_GLOW[card.rarity];
+  const boost = ovrBoost ?? 0;
 
   return (
     <div
@@ -1313,20 +1618,59 @@ function CardFace({ card }: { card: PlayerCard }) {
         >
           {card.nation.slice(0, 3).toUpperCase()}
         </span>
-        <span
+        <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+          <span
+            style={{
+              background: color,
+              color: "#000",
+              fontSize: 9,
+              fontWeight: 800,
+              padding: "2px 6px",
+              borderRadius: 6,
+              letterSpacing: "0.06em",
+            }}
+          >
+            {card.position}
+          </span>
+          {card.altPosition && (
+            <span
+              style={{
+                background: "rgba(255,255,255,0.15)",
+                color: "rgba(255,255,255,0.8)",
+                fontSize: 8,
+                fontWeight: 800,
+                padding: "2px 5px",
+                borderRadius: 6,
+                letterSpacing: "0.04em",
+                border: "1px solid rgba(255,255,255,0.25)",
+              }}
+            >
+              {card.altPosition}
+            </span>
+          )}
+        </div>
+      </div>
+      {/* OVR Boost badge */}
+      {boost > 0 && (
+        <div
           style={{
-            background: color,
+            position: "absolute",
+            top: 6,
+            left: 6,
+            background: getBoostColor(boost),
             color: "#000",
-            fontSize: 9,
-            fontWeight: 800,
+            fontSize: 11,
+            fontWeight: 900,
             padding: "2px 6px",
-            borderRadius: 6,
-            letterSpacing: "0.06em",
+            borderRadius: 8,
+            zIndex: 10,
+            letterSpacing: "0.02em",
+            boxShadow: `0 0 8px ${getBoostColor(boost)}88`,
           }}
         >
-          {card.position}
-        </span>
-      </div>
+          +{boost}
+        </div>
+      )}
 
       {/* OVR */}
       <div style={{ textAlign: "center", zIndex: 1 }}>

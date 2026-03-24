@@ -64,7 +64,7 @@ export default function MarketScreen({ onCoinsChange }: MarketScreenProps) {
     const col = getCollection();
     const existing = col.find((c) => c.cardId === card.id);
     if (existing) existing.duplicates++;
-    else col.push({ cardId: card.id, duplicates: 1 });
+    else col.push({ cardId: card.id, duplicates: 1, ovrBoost: 0 });
     saveCollection(col);
     setCollection([...col]);
     refreshCoins();
