@@ -1463,7 +1463,7 @@ const LEGENDARY_OVR_TIERS = [
   { ovr: 96, weight: 3.5 },
   { ovr: 97, weight: 2.5 },
   { ovr: 98, weight: 2 },
-  { ovr: 100, weight: 1.5 },
+  { ovr: 100, weight: 8 },
 ];
 
 function pickLegendaryCard(): PlayerCard {
@@ -2008,7 +2008,7 @@ function PackOpeningScreen({
           return prev;
         }
         const nextCard = cards[prev];
-        if (nextCard && nextCard.rarity === "legendary") {
+        if (nextCard && nextCard.ovr >= 85) {
           if (timerRef.current) clearInterval(timerRef.current);
           setWalkoutCard(nextCard);
         }
@@ -2082,11 +2082,7 @@ function PackOpeningScreen({
             onClick={() => {
               if (revealed <= i) {
                 const nextCard = cards[i];
-                if (
-                  (nextCard.rarity === "legendary" ||
-                    nextCard.rarity === "epic") &&
-                  revealed === i
-                ) {
+                if (nextCard.ovr >= 85 && revealed === i) {
                   setWalkoutCard(nextCard);
                 }
                 setRevealed(i + 1);
