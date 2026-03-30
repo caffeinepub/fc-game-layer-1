@@ -1,9 +1,9 @@
 import Map "mo:core/Map";
 import Principal "mo:core/Principal";
 import Text "mo:core/Text";
-import Migration "migration";
 
-(with migration = Migration.run)
+
+
 actor {
   let progressData = Map.empty<Principal, Text>();
 

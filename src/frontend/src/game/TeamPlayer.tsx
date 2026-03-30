@@ -44,6 +44,19 @@ const DIFFICULTY_SETTINGS = {
   },
 };
 
+// Zone boundaries for each role on the blue team.
+// Blue team defends positive-Z end (own goal ~z=32).
+// When joystick is idle, the controlled player is clamped to these bounds.
+const ROLE_ZONES: Record<
+  "GK" | "DEF" | "MID" | "FWD",
+  { zMin: number; zMax: number; xMin: number; xMax: number }
+> = {
+  GK: { zMin: 22, zMax: 33, xMin: -6, xMax: 6 },
+  DEF: { zMin: 10, zMax: 30, xMin: -15, xMax: 15 },
+  MID: { zMin: -5, zMax: 22, xMin: -15, xMax: 15 },
+  FWD: { zMin: -20, zMax: 15, xMin: -15, xMax: 15 },
+};
+
 export interface TeamPlayerHandle {
   group: THREE.Group;
   reset: () => void;
@@ -123,7 +136,9 @@ const TeamPlayer = forwardRef<TeamPlayerHandle, TeamPlayerProps>(
         const dir = getDirection();
         const SPEED = 10;
         const moving = dir.x !== 0 || dir.z !== 0;
+
         if (moving) {
+          // Joystick active: full pitch movement, no zone restriction
           group.position.x += dir.x * SPEED * delta;
           group.position.z += dir.z * SPEED * delta;
           group.position.x = THREE.MathUtils.clamp(
@@ -139,6 +154,19 @@ const TeamPlayer = forwardRef<TeamPlayerHandle, TeamPlayerProps>(
           const angle = Math.atan2(dir.x, dir.z);
           group.rotation.y = angle;
           facingRef.current.set(dir.x, 0, dir.z).normalize();
+        } else {
+          // Joystick idle: clamp player to their positional zone
+          const zone = ROLE_ZONES[role];
+          group.position.x = THREE.MathUtils.clamp(
+            group.position.x,
+            zone.xMin,
+            zone.xMax,
+          );
+          group.position.z = THREE.MathUtils.clamp(
+            group.position.z,
+            zone.zMin,
+            zone.zMax,
+          );
         }
 
         // Dribble bounce when controlled
