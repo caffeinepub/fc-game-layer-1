@@ -8,4 +8,7 @@ export interface None {
 }
 export type Option<T> = Some<T> | None;
 export interface backendInterface {
+    deleteMyProgress(): Promise<void>;
+    loadProgress(): Promise<string | null>;
+    saveProgress(progressDataString: string): Promise<void>;
 }

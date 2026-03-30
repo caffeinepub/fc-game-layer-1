@@ -1,35 +1,34 @@
-# FC Game - Layer 16: Jokers, Chance Tokens, Gem Boost, Deduplication
+# FC Game - Save System + Bug Fixes
 
 ## Current State
-- PackSystem has ALL_CARDS pool with common/rare/epic/legendary tiers (OVR 60-100)
-- generatePackCards can produce duplicate card IDs in a single pack
-- Squad slots allow the same cardId in multiple positions
-- Match rewards: win=200 gems, draw=75 gems, loss=25 gems
-- OwnedCard has { cardId, duplicates }; no per-card OVR modification
-- No chance tokens or joker cards exist
+- All game progress stored in localStorage (not per-account, no real persistence)
+- Daily challenges reset every day, allowing coin farming by replaying completed tasks
+- Opponent AI: GK can cross the halfway line (z=0) in certain situations
+- Backend is empty (no Motoko logic)
 
 ## Requested Changes (Diff)
 
 ### Add
-- **Joker cards**: PlayerCard gets optional `altPosition?: Position`. Add ~10 joker cards spread across rare/epic/legendary tiers with alt positions (e.g. ST/CF, CM/CAM, CB/CDM). Show alt position as a small badge on CardFace: "ST | CF"
-- **Chance Tokens**: New item type stored in localStorage (`fc_chance_tokens: number`). Add storage helpers: `getChanceTokens()`, `addChanceTokens(n)`, `spendChanceToken()`. Each token spend applies to a specific player: random roll (60% success) → OVR +1. Each player tracks `ovrBoost: number` in OwnedCard (min 0, max 7). Show boost count on squad cards.
-- **OVR boost colour coding**: Colour the boost badge by level: 0=no badge, 1-2=#22c55e (green), 3-4=#3b82f6 (blue), 5-6=#a855f7 (purple), 7=#fbbf24 (gold/legendary)
-- **Chance Token UI in SquadScreen**: On a player card in My Squad, show a "Use Token" button if tokens > 0 and boost < 7. Show result toast (success/fail).
-- **Add more legendary/epic cards** with OVR 95-100 to ALL_CARDS (add ~8 new cards)
-- **Tokens earned from matches**: Win grants 2 chance tokens, draw 1, loss 0. Add to GameScene fulltime rewards.
+- Motoko backend with saveProgress/loadProgress APIs keyed by Internet Identity principal
+- On load: if user is authenticated, pull saved data from backend and merge into localStorage
+- On match end / major action: auto-sync localStorage to backend
 
 ### Modify
-- **Gem rewards**: loss=100, draw=150, win=300 gems per match
-- **generatePackCards**: Deduplicate — if a card was already picked, re-roll once
-- **OwnedCard interface** (storage.ts): Add `ovrBoost?: number` field. Update `addCardsToCollection` to default ovrBoost to 0 for new cards.
-- **CardFace component**: Show altPosition badge if present. Show ovrBoost color badge if boost > 0.
-- **SquadScreen**: Prevent placing the same cardId in two different squad slots. Show "Use Token" button per card. Show current token count in header.
+- Remove daily challenges system entirely (getChallenges, saveChallenges, DAILY_CHALLENGES_TEMPLATE)
+- Update EventsScreen to only show weekly challenges (no daily section)
+- Update GameScene to not update/save daily challenges on match end
+- Red GK: hard-clamp z position to <= -1 (never crosses halfway line)
+- Red DEF: clamp to z <= -2 unless chasing ball (max z = 5)
+- Blue GK: hard-clamp z position to >= 1 (never crosses halfway line)
 
 ### Remove
-- Nothing removed
+- Daily challenges section from EventsScreen
+- getChallenges/saveChallenges imports and usage in GameScene
 
 ## Implementation Plan
-1. `storage.ts`: Add `ovrBoost?: number` to OwnedCard. Add `getChanceTokens`, `addChanceTokens`, `spendChanceToken`. Add `getOvrBoost(cardId)` and `setOvrBoost(cardId, n)` helpers.
-2. `PackSystem.tsx`: Add `altPosition?: Position` to PlayerCard. Add ~10 joker cards and ~8 new high-OVR legends to ALL_CARDS. Fix generatePackCards deduplication. Update CardFace to show altPosition and ovrBoost badge with colour coding.
-3. `GameScene.tsx`: Change gem rewards (loss=100, draw=150, win=300). Add chance token grants (win+2, draw+1) via addChanceTokens. Show tokens earned in fulltime screen.
-4. `SquadScreen.tsx`: Show chance token count in header. Add "Use Token" button on each squad card. Prevent duplicate card IDs in squad slots.
+1. Generate Motoko backend with player save/load endpoints
+2. Remove daily challenge logic from storage.ts (keep types/functions but remove daily-reset behavior)
+3. Remove daily challenge UI from EventsScreen.tsx
+4. Remove daily challenge update code from GameScene.tsx
+5. Add save/load hooks - on app start load from backend if authenticated, auto-save on key events
+6. Fix GK position clamping in TeamPlayer.tsx (_runOpponentAI and _runTeammateAI)

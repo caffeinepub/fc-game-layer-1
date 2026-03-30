@@ -2,6 +2,7 @@ import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import {
   type WeeklyChallenge,
+  type WeeklyChallengeState,
   addCoins,
   addGems,
   getWeeklyChallenges,
@@ -69,8 +70,9 @@ const FEATURED_EVENTS = [
 ];
 
 export default function EventsScreen({ onTrainingMatch }: EventsScreenProps) {
-  const [challenges, setChallenges] = useState<WeeklyChallenge[]>([]);
-  const [claimedIds, setClaimedIds] = useState<string[]>([]);
+  const [weeklyState, setWeeklyState] = useState<WeeklyChallengeState | null>(
+    null,
+  );
   const [countdown, setCountdown] = useState(getMsUntilMonday());
 
   const weekKey = getWeekKey();
@@ -78,8 +80,7 @@ export default function EventsScreen({ onTrainingMatch }: EventsScreenProps) {
   const featuredEvent = FEATURED_EVENTS[weekNum % FEATURED_EVENTS.length];
 
   useEffect(() => {
-    const state = getWeeklyChallenges();
-    setChallenges(state.challenges);
+    setWeeklyState(getWeeklyChallenges());
   }, []);
 
   useEffect(() => {
@@ -90,11 +91,21 @@ export default function EventsScreen({ onTrainingMatch }: EventsScreenProps) {
   }, []);
 
   const handleClaim = (ch: WeeklyChallenge) => {
-    if (!ch.done || claimedIds.includes(ch.id)) return;
+    if (!ch.done || ch.claimed || !weeklyState) return;
     if (ch.rewardCoins > 0) addCoins(ch.rewardCoins);
     if (ch.rewardGems > 0) addGems(ch.rewardGems);
-    setClaimedIds((prev) => [...prev, ch.id]);
+    const updatedChallenges = weeklyState.challenges.map((c) =>
+      c.id === ch.id ? { ...c, claimed: true } : c,
+    );
+    const updatedState: WeeklyChallengeState = {
+      ...weeklyState,
+      challenges: updatedChallenges,
+    };
+    saveWeeklyChallenges(updatedState);
+    setWeeklyState(updatedState);
   };
+
+  const challenges = weeklyState?.challenges ?? [];
 
   const s = {
     container: {
@@ -220,7 +231,7 @@ export default function EventsScreen({ onTrainingMatch }: EventsScreenProps) {
               100,
               Math.round((ch.progress / ch.target) * 100),
             );
-            const isClaimed = claimedIds.includes(ch.id);
+            const isClaimed = ch.claimed;
             return (
               <div
                 key={ch.id}

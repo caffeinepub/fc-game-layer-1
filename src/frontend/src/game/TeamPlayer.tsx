@@ -360,7 +360,8 @@ function _runTeammateAI(
   if (role === "GK") {
     SPEED = 9;
     kickCooldown = 500;
-    if (distToBall < 6) {
+    // Blue GK only rushes when ball is very close to blue goal (z > 22)
+    if (distToBall < 5 && ballPos.z > 22) {
       targetPos = ballPos.clone();
     } else {
       const diff2 = new THREE.Vector3().subVectors(anchor, myPos);
@@ -404,6 +405,11 @@ function _runTeammateAI(
   }
 
   _moveToward(group, myPos, targetPos, SPEED, delta);
+
+  // Clamp blue GK to own half (positive Z side)
+  if (role === "GK") {
+    group.position.z = Math.max(group.position.z, 1);
+  }
 
   if (distToBall < KICK_RANGE && now - lastKickTime.current > kickCooldown) {
     const worldPos = new THREE.Vector3();
@@ -458,10 +464,10 @@ function _runOpponentAI(
   let kickCooldown = settings.kickCooldown;
 
   if (role === "GK") {
-    // GK: hold goal line, track ball laterally, rush only when ball is very close
+    // GK: hold goal line, track ball laterally, rush only when ball is deep in own half
     kickCooldown = 500;
     speed = 9;
-    const rushOut = distToBall < 5 && ballPos.z < -20;
+    const rushOut = distToBall < 5 && ballPos.z < -15;
     if (rushOut) {
       targetPos = ballPos.clone();
     } else {
@@ -476,8 +482,9 @@ function _runOpponentAI(
     speed = settings.speed * 0.9 * tacticMultiplier;
 
     if (isClosestToBall && ballPos.z < anchor.z + 8) {
-      // Ball chaser: press directly
+      // Ball chaser: press directly but cap target to z=4 max
       targetPos = ballPos.clone();
+      targetPos.z = Math.min(targetPos.z, 4);
     } else {
       // Hold compact defensive line, track ball laterally 40%
       const holdX = anchor.x + (ballPos.x - anchor.x) * 0.4;
@@ -500,7 +507,7 @@ function _runOpponentAI(
       const zoneZ = THREE.MathUtils.clamp(
         anchor.z + zOffset,
         ownGoalZ + 6,
-        OPPONENT_ATTACK_Z - 8,
+        HALF_H - 4,
       );
       const holdX = anchor.x + (ballPos.x - anchor.x) * 0.35;
       targetPos = new THREE.Vector3(
@@ -537,6 +544,15 @@ function _runOpponentAI(
   }
 
   _moveToward(group, myPos, targetPos, speed, delta);
+
+  // Clamp red GK to own half (negative Z side) — never cross halfway line
+  if (role === "GK") {
+    group.position.z = Math.min(group.position.z, -1);
+  }
+  // Clamp red DEF — shouldn't venture far past halfway
+  if (role === "DEF") {
+    group.position.z = Math.min(group.position.z, 5);
+  }
 
   if (distToBall < KICK_RANGE && now - lastKickTime.current > kickCooldown) {
     const worldPos = new THREE.Vector3();

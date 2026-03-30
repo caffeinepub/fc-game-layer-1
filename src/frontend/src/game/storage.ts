@@ -1,4 +1,4 @@
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────────────────
 
 export interface OwnedCard {
   cardId: string;
@@ -32,7 +32,7 @@ export interface ChallengeState {
   challenges: Challenge[];
 }
 
-// ─── XP / Rank ────────────────────────────────────────────────────────────────
+// ─── XP / Rank ────────────────────────────────────────────────────────────────────
 
 const XP_THRESHOLDS = [
   0, 100, 250, 500, 900, 1400, 2000, 2800, 3700, 4800, 6200, 7800, 9600, 11800,
@@ -64,7 +64,7 @@ export function getXpForNextRank(rank: number): number {
   return XP_THRESHOLDS[Math.min(rank, 19)] ?? XP_THRESHOLDS[19];
 }
 
-// ─── Gems ─────────────────────────────────────────────────────────────────────
+// ─── Gems ─────────────────────────────────────────────────────────────────────────────
 
 export function getGems(): number {
   const v = localStorage.getItem("fc_gems");
@@ -89,7 +89,7 @@ export function deductGems(amount: number): boolean {
   return true;
 }
 
-// ─── Coins ────────────────────────────────────────────────────────────────────
+// ─── Coins ──────────────────────────────────────────────────────────────────────────────
 
 export function getCoins(): number {
   const v = localStorage.getItem("fc_coins");
@@ -114,7 +114,7 @@ export function deductCoins(amount: number): boolean {
   return true;
 }
 
-// ─── XP ───────────────────────────────────────────────────────────────────────
+// ─── XP ────────────────────────────────────────────────────────────────────────────────
 
 export function getXP(): number {
   return Number.parseInt(localStorage.getItem("fc_xp") || "0", 10) || 0;
@@ -127,7 +127,7 @@ export function addXP(amount: number): number {
   return next;
 }
 
-// ─── Collection ───────────────────────────────────────────────────────────────
+// ─── Collection ────────────────────────────────────────────────────────────────────────
 
 export function getCollection(): OwnedCard[] {
   const v = localStorage.getItem("fc_collection");
@@ -153,7 +153,7 @@ export function addCardsToCollection(ids: string[]): void {
   saveCollection(col);
 }
 
-// ─── Chance Tokens ────────────────────────────────────────────────────────────
+// ─── Chance Tokens ────────────────────────────────────────────────────────────────────
 
 export function getChanceTokens(): number {
   return (
@@ -186,7 +186,7 @@ export function setOvrBoost(cardId: string, boost: number): void {
   }
 }
 
-// ─── Squad ────────────────────────────────────────────────────────────────────
+// ─── Squad ──────────────────────────────────────────────────────────────────────────────
 
 const DEFAULT_SQUAD: SquadSave = {
   formation: "4-3-3",
@@ -208,7 +208,7 @@ export function saveSquad(s: SquadSave): void {
   localStorage.setItem("fc_squad", JSON.stringify(s));
 }
 
-// ─── Market ───────────────────────────────────────────────────────────────────
+// ─── Market ─────────────────────────────────────────────────────────────────────────────
 
 export function getMarketListings(): MarketListing[] {
   const v = localStorage.getItem("fc_market");
@@ -224,7 +224,8 @@ export function saveMarketListings(l: MarketListing[]): void {
   localStorage.setItem("fc_market", JSON.stringify(l));
 }
 
-// ─── Challenges ───────────────────────────────────────────────────────────────
+// ─── Challenges (one-time, no daily reset) ──────────────────────────────────────────
+// Challenges are completed once and stay completed. Progress is saved permanently.
 
 const DAILY_CHALLENGES_TEMPLATE: Challenge[] = [
   {
@@ -253,16 +254,12 @@ const DAILY_CHALLENGES_TEMPLATE: Challenge[] = [
   },
 ];
 
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export function getChallenges(): ChallengeState {
   const v = localStorage.getItem("fc_challenges");
-  const today = todayStr();
   if (!v) {
+    // First time: initialise with today's date but NEVER reset by date again
     const fresh = {
-      date: today,
+      date: "permanent",
       challenges: DAILY_CHALLENGES_TEMPLATE.map((c) => ({ ...c })),
     };
     localStorage.setItem("fc_challenges", JSON.stringify(fresh));
@@ -270,18 +267,16 @@ export function getChallenges(): ChallengeState {
   }
   try {
     const parsed: ChallengeState = JSON.parse(v);
-    if (parsed.date !== today) {
-      const fresh = {
-        date: today,
-        challenges: DAILY_CHALLENGES_TEMPLATE.map((c) => ({ ...c })),
-      };
-      localStorage.setItem("fc_challenges", JSON.stringify(fresh));
-      return fresh;
+    // Migrate old saves that still have a date key — keep progress, freeze the date
+    if (parsed.date !== "permanent") {
+      const migrated = { ...parsed, date: "permanent" };
+      localStorage.setItem("fc_challenges", JSON.stringify(migrated));
+      return migrated;
     }
     return parsed;
   } catch {
     const fresh = {
-      date: today,
+      date: "permanent",
       challenges: DAILY_CHALLENGES_TEMPLATE.map((c) => ({ ...c })),
     };
     localStorage.setItem("fc_challenges", JSON.stringify(fresh));
@@ -293,7 +288,7 @@ export function saveChallenges(c: ChallengeState): void {
   localStorage.setItem("fc_challenges", JSON.stringify(c));
 }
 
-// ─── Last Login ───────────────────────────────────────────────────────────────
+// ─── Last Login ──────────────────────────────────────────────────────────────────────
 
 export function getLastLogin(): string {
   return localStorage.getItem("fc_last_login") || "";
@@ -303,7 +298,7 @@ export function setLastLogin(d: string): void {
   localStorage.setItem("fc_last_login", d);
 }
 
-// ─── Weekly Challenges ────────────────────────────────────────────────────────
+// ─── Weekly Challenges ────────────────────────────────────────────────────────────────
 
 export interface WeeklyChallenge {
   id: string;
@@ -313,6 +308,7 @@ export interface WeeklyChallenge {
   target: number;
   progress: number;
   done: boolean;
+  claimed: boolean;
 }
 
 export interface WeeklyChallengeState {
@@ -341,6 +337,7 @@ const WEEKLY_CHALLENGES_TEMPLATE: WeeklyChallenge[] = [
     target: 10,
     progress: 0,
     done: false,
+    claimed: false,
   },
   {
     id: "win5",
@@ -350,6 +347,7 @@ const WEEKLY_CHALLENGES_TEMPLATE: WeeklyChallenge[] = [
     target: 5,
     progress: 0,
     done: false,
+    claimed: false,
   },
   {
     id: "open3packs",
@@ -359,6 +357,7 @@ const WEEKLY_CHALLENGES_TEMPLATE: WeeklyChallenge[] = [
     target: 3,
     progress: 0,
     done: false,
+    claimed: false,
   },
 ];
 
@@ -383,6 +382,10 @@ export function getWeeklyChallenges(): WeeklyChallengeState {
       localStorage.setItem("fc_weekly_challenges", JSON.stringify(fresh));
       return fresh;
     }
+    // Migrate older saves that lack the claimed field
+    for (const ch of parsed.challenges) {
+      if (ch.claimed === undefined) ch.claimed = false;
+    }
     return parsed;
   } catch {
     const fresh: WeeklyChallengeState = {
@@ -398,7 +401,7 @@ export function saveWeeklyChallenges(state: WeeklyChallengeState): void {
   localStorage.setItem("fc_weekly_challenges", JSON.stringify(state));
 }
 
-// ─── Pack Opens Tracking ─────────────────────────────────────────────────────
+// ─── Pack Opens Tracking ─────────────────────────────────────────────────────────────────
 
 interface PackOpensRecord {
   date: string;
@@ -425,7 +428,7 @@ export function incrementPackOpens(): void {
   localStorage.setItem("fc_pack_opens", JSON.stringify(record));
 }
 
-// ─── Daily Match Coins ────────────────────────────────────────────────────────
+// ─── Daily Match Coins ────────────────────────────────────────────────────────────────
 
 const DAILY_MATCH_COIN_CAP = 500;
 
@@ -463,7 +466,7 @@ export function addDailyMatchCoins(amount: number): number {
   return actual;
 }
 
-// ─── Save System (Layer 12) ────────────────────────────────────────────────
+// ─── Save System (Layer 12) ───────────────────────────────────────────────────────────────────
 
 const SAVE_KEYS = [
   "fc_gems",
