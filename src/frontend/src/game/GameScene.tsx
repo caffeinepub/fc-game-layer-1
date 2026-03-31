@@ -75,15 +75,15 @@ function formatTime(seconds: number): string {
 // Formation positions
 const BLUE_POSITIONS = [
   new THREE.Vector3(0, 0, 30), // GK
-  new THREE.Vector3(-10, 0, 24), // DEF L
-  new THREE.Vector3(-4, 0, 22), // DEF CL
-  new THREE.Vector3(4, 0, 22), // DEF CR
-  new THREE.Vector3(10, 0, 24), // DEF R
-  new THREE.Vector3(-8, 0, 14), // MID L
-  new THREE.Vector3(0, 0, 12), // MID C
-  new THREE.Vector3(8, 0, 14), // MID R
-  new THREE.Vector3(-6, 0, 8), // FWD L
-  new THREE.Vector3(6, 0, 8), // FWD R
+  new THREE.Vector3(-22, 0, 24), // LB
+  new THREE.Vector3(-8, 0, 22), // CB L
+  new THREE.Vector3(8, 0, 22), // CB R
+  new THREE.Vector3(22, 0, 24), // RB
+  new THREE.Vector3(-30, 0, 12), // LM (winger)
+  new THREE.Vector3(-8, 0, 10), // CM L
+  new THREE.Vector3(8, 0, 10), // CM R
+  new THREE.Vector3(30, 0, 12), // RM (winger)
+  new THREE.Vector3(0, 0, 4), // ST
 ];
 
 const BLUE_ROLES: Array<"GK" | "DEF" | "MID" | "FWD"> = [
@@ -114,17 +114,17 @@ const RED_ROLES: Array<"GK" | "DEF" | "MID" | "FWD"> = [
 ];
 
 const RED_POSITIONS = [
-  new THREE.Vector3(0, 0, -30),
-  new THREE.Vector3(-10, 0, -22),
-  new THREE.Vector3(-4, 0, -24),
-  new THREE.Vector3(4, 0, -24),
-  new THREE.Vector3(10, 0, -22),
-  new THREE.Vector3(-8, 0, -14),
-  new THREE.Vector3(0, 0, -12),
-  new THREE.Vector3(8, 0, -14),
-  new THREE.Vector3(-6, 0, -8),
-  new THREE.Vector3(0, 0, -10),
-  new THREE.Vector3(6, 0, -8),
+  new THREE.Vector3(0, 0, -30), // GK
+  new THREE.Vector3(-22, 0, -24), // LB
+  new THREE.Vector3(-8, 0, -22), // CB L
+  new THREE.Vector3(8, 0, -22), // CB R
+  new THREE.Vector3(22, 0, -24), // RB
+  new THREE.Vector3(-30, 0, -12), // LM (winger)
+  new THREE.Vector3(-8, 0, -10), // CM L
+  new THREE.Vector3(8, 0, -10), // CM R
+  new THREE.Vector3(30, 0, -12), // RM (winger)
+  new THREE.Vector3(-8, 0, -4), // FWD L
+  new THREE.Vector3(8, 0, -4), // FWD R
 ];
 
 const SLOT_POSITIONS = [

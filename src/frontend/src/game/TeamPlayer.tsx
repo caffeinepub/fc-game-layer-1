@@ -51,10 +51,10 @@ const ROLE_ZONES: Record<
   "GK" | "DEF" | "MID" | "FWD",
   { zMin: number; zMax: number; xMin: number; xMax: number }
 > = {
-  GK: { zMin: 22, zMax: 33, xMin: -6, xMax: 6 },
-  DEF: { zMin: 10, zMax: 30, xMin: -15, xMax: 15 },
-  MID: { zMin: -5, zMax: 22, xMin: -15, xMax: 15 },
-  FWD: { zMin: -20, zMax: 15, xMin: -15, xMax: 15 },
+  GK: { zMin: 22, zMax: 33, xMin: -8, xMax: 8 },
+  DEF: { zMin: 10, zMax: 30, xMin: -38, xMax: 38 },
+  MID: { zMin: -5, zMax: 22, xMin: -38, xMax: 38 },
+  FWD: { zMin: -20, zMax: 15, xMin: -35, xMax: 35 },
 };
 
 export interface TeamPlayerHandle {
@@ -524,7 +524,7 @@ function _runOpponentAI(
       // Hold compact defensive line, track ball laterally 40%
       const holdX = anchor.x + (ballPos.x - anchor.x) * 0.4;
       targetPos = new THREE.Vector3(
-        THREE.MathUtils.clamp(holdX, anchor.x - 6, anchor.x + 6),
+        THREE.MathUtils.clamp(holdX, anchor.x - 12, anchor.x + 12),
         0,
         anchor.z,
       );
@@ -546,7 +546,7 @@ function _runOpponentAI(
       );
       const holdX = anchor.x + (ballPos.x - anchor.x) * 0.35;
       targetPos = new THREE.Vector3(
-        THREE.MathUtils.clamp(holdX, anchor.x - 7, anchor.x + 7),
+        THREE.MathUtils.clamp(holdX, anchor.x - 14, anchor.x + 14),
         0,
         zoneZ,
       );

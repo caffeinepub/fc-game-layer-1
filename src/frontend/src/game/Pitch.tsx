@@ -163,8 +163,8 @@ export default function Pitch() {
   //   halfArc = acos(5.5/9.15) ≈ 0.927 rad → total arc ≈ 1.855 rad
   const D_ARC = 1.855;
   // rotation.y to centre each arc facing toward pitch centre
-  const D_Y_BOTTOM = -(Math.PI / 2 - D_ARC / 2); // bottom arc faces +z
-  const D_Y_TOP = Math.PI / 2 + D_ARC / 2; //    top arc faces -z
+  const D_Y_BOTTOM = -(Math.PI / 2 + D_ARC / 2); // bottom arc faces +z (toward center) // bottom arc faces +z
+  const D_Y_TOP = Math.PI / 2 - D_ARC / 2; //    top arc faces -z (toward center) //    top arc faces -z
 
   return (
     <group>
