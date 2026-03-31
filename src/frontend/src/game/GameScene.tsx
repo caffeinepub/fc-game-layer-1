@@ -23,15 +23,21 @@ import {
   addGems,
   addXP,
   getChallenges,
+  getCollection,
   getSquad,
+  getUsername,
   getWeeklyChallenges,
+  hasUsername,
   saveChallenges,
   saveWeeklyChallenges,
+  setUsername,
 } from "./storage";
 import {
   releaseMobileKick,
+  setMobileSprint,
   startMobileKick,
   triggerPass,
+  triggerThrough,
   useInput,
 } from "./useInput";
 
@@ -141,6 +147,32 @@ function getTacticMultiplier(tactic: string): number {
   return 1;
 }
 
+function getPosGroup(pos: string): string {
+  if (pos === "GK") return "GK";
+  if (pos.includes("B") || pos === "CB") return "DEF";
+  if (["CDM", "CM", "CAM", "LM", "RM"].includes(pos)) return "MID";
+  return "FWD";
+}
+
+function computeOvrMultiplier(
+  squad: import("./storage").SquadSave,
+  slotIdx: number,
+): number {
+  const cardId = squad.slots[slotIdx];
+  if (!cardId) return 1.0;
+  const card = ALL_CARDS.find((c) => c.id === cardId);
+  if (!card) return 1.0;
+  const collection = getCollection();
+  const owned = collection.find((c) => c.cardId === cardId);
+  const boost = owned?.ovrBoost ?? 0;
+  const slotPos = SLOT_POSITIONS[slotIdx];
+  const outOfPos = getPosGroup(card.position) !== getPosGroup(slotPos);
+  let effectiveOvr = Math.min(100, card.ovr + boost);
+  if (outOfPos) effectiveOvr = Math.max(55, effectiveOvr - 5);
+  // Map OVR 60–100 to multiplier 0.7–1.3
+  return 0.7 + ((effectiveOvr - 60) / 40) * 0.6;
+}
+
 function SceneContent({
   playerRef,
   ballRef,
@@ -158,6 +190,7 @@ function SceneContent({
   controlledPosRef,
   jerseyPrimary,
   jerseyShorts,
+  ovrMultipliers,
 }: {
   playerRef: React.RefObject<PlayerHandle | null>;
   ballRef: React.RefObject<BallHandle | null>;
@@ -175,6 +208,7 @@ function SceneContent({
   controlledPosRef: React.MutableRefObject<THREE.Vector3>;
   jerseyPrimary: string;
   jerseyShorts: string;
+  ovrMultipliers: number[];
 }) {
   useInput();
 
@@ -251,6 +285,7 @@ function SceneContent({
         isAI={activePlayerIdx !== 0}
         jerseyColor={jerseyPrimary}
         shortsColor={jerseyShorts}
+        ovrMultiplier={ovrMultipliers[0]}
       />
 
       {/* Blue teammates */}
@@ -270,6 +305,7 @@ function SceneContent({
           isControlled={activePlayerIdx > 0 && activePlayerIdx - 1 === i}
           tacticMultiplier={tacticMultiplier}
           role={BLUE_ROLES[i]}
+          ovrMultiplier={ovrMultipliers[i + 1]}
         />
       ))}
 
@@ -335,11 +371,20 @@ export default function GameScene() {
   const [jerseyShorts, setJerseyShorts] = useState("#0d47a1");
   const controlledPosRef = useRef(new THREE.Vector3(0, 0, 15));
   const playerGoalsThisMatch = useRef(0);
+  const [showUsernameModal, setShowUsernameModal] = useState(
+    () => !hasUsername(),
+  );
+  const [usernameInput, setUsernameInput] = useState("");
+  const [usernameError, setUsernameError] = useState("");
 
   // Squad data
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
   const squad = useMemo(() => getSquad(), [gameState]);
   const tacticMultiplier = getTacticMultiplier(squad.tactic);
+
+  const ovrMultipliers = useMemo<number[]>(() => {
+    return SLOT_POSITIONS.map((_, i) => computeOvrMultiplier(squad, i));
+  }, [squad]);
 
   // Derive player names from squad slots
   const playerNames = useMemo<string[]>(() => {
@@ -570,6 +615,7 @@ export default function GameScene() {
             controlledPosRef={controlledPosRef}
             jerseyPrimary={jerseyPrimary}
             jerseyShorts={jerseyShorts}
+            ovrMultipliers={ovrMultipliers}
           />
         </Suspense>
       </Canvas>
@@ -793,77 +839,43 @@ export default function GameScene() {
             position: "fixed",
             top: "max(80px, calc(env(safe-area-inset-top, 0px) + 80px))",
             right: "max(16px, calc(env(safe-area-inset-right, 0px) + 16px))",
-            background: "rgba(34,197,94,0.2)",
-            border: "1.5px solid rgba(34,197,94,0.5)",
-            backdropFilter: "blur(8px)",
-            color: "#86efac",
-            fontSize: 12,
+            background: "rgba(255,255,255,0.12)",
+            border: "1.5px solid rgba(255,255,255,0.3)",
+            backdropFilter: "blur(10px)",
+            color: "white",
+            fontSize: 11,
             fontWeight: 800,
             fontFamily: "system-ui, sans-serif",
-            padding: "10px 16px",
+            padding: "8px 14px",
             borderRadius: 24,
             cursor: "pointer",
-            minHeight: 44,
+            minHeight: 40,
             zIndex: 100,
-            letterSpacing: "0.04em",
+            letterSpacing: "0.06em",
             userSelect: "none",
             WebkitUserSelect: "none",
           }}
         >
-          🔄 Switch
+          Switch
         </button>
       )}
 
-      {/* Right-side action buttons: PASS + SHOOT */}
+      {/* FC Mobile-style button cluster — bottom-right */}
       {gameState === "playing" && (
         <div
           style={{
             position: "fixed",
-            bottom: "max(24px, calc(env(safe-area-inset-bottom, 0px) + 24px))",
-            right: "max(24px, calc(env(safe-area-inset-right, 0px) + 24px))",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-end",
-            gap: 12,
+            bottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 20px))",
+            right: "max(16px, calc(env(safe-area-inset-right, 0px) + 16px))",
+            width: 196,
+            height: 196,
             zIndex: 100,
+            userSelect: "none",
+            WebkitUserSelect: "none",
+            touchAction: "none",
           }}
         >
-          <button
-            type="button"
-            data-ocid="pass.button"
-            onTouchStart={(e) => {
-              e.preventDefault();
-              triggerPass();
-            }}
-            onMouseDown={() => triggerPass()}
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: "50%",
-              background: "rgba(59,130,246,0.25)",
-              border: "2px solid rgba(59,130,246,0.6)",
-              backdropFilter: "blur(8px)",
-              color: "white",
-              fontSize: 12,
-              fontWeight: 800,
-              fontFamily: "system-ui, sans-serif",
-              letterSpacing: "0.06em",
-              cursor: "pointer",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 2,
-              userSelect: "none",
-              WebkitUserSelect: "none",
-              touchAction: "none",
-              boxShadow: "0 4px 16px rgba(59,130,246,0.3)",
-            }}
-          >
-            <span style={{ fontSize: 18 }}>↗</span>
-            <span>PASS</span>
-          </button>
-
+          {/* SHOOT — top-right, gold, largest */}
           <button
             type="button"
             data-ocid="shoot.button"
@@ -885,18 +897,66 @@ export default function GameScene() {
               setShootPressed(false);
               releaseMobileKick();
             }}
+            onMouseLeave={() => {
+              if (shootPressed) {
+                setShootPressed(false);
+                releaseMobileKick();
+              }
+            }}
             style={{
-              width: 88,
-              height: 88,
+              position: "absolute",
+              top: 0,
+              right: 0,
+              width: 92,
+              height: 92,
               borderRadius: "50%",
               background: shootPressed
-                ? "rgba(239,68,68,0.45)"
-                : "rgba(239,68,68,0.25)",
-              border: "2px solid rgba(239,68,68,0.6)",
-              backdropFilter: "blur(8px)",
+                ? "radial-gradient(circle at 40% 35%, #fde68a, #d97706)"
+                : "radial-gradient(circle at 40% 35%, #fcd34d, #b45309)",
+              border: `2.5px solid ${shootPressed ? "#fbbf24" : "#92400e"}`,
+              color: "#1a0a00",
+              fontSize: 11,
+              fontWeight: 900,
+              fontFamily: "system-ui, sans-serif",
+              letterSpacing: "0.07em",
+              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 1,
+              touchAction: "none",
+              transition: "all 0.06s ease",
+              boxShadow: shootPressed
+                ? "0 0 24px rgba(251,191,36,0.7), inset 0 2px 4px rgba(255,255,255,0.3)"
+                : "0 4px 18px rgba(180,83,9,0.5), inset 0 2px 4px rgba(255,255,255,0.2)",
+            }}
+          >
+            <span style={{ fontSize: 20, lineHeight: 1 }}>SHOOT</span>
+          </button>
+
+          {/* THROUGH — middle-left, olive green */}
+          <button
+            type="button"
+            data-ocid="through.button"
+            onTouchStart={(e) => {
+              e.preventDefault();
+              triggerThrough();
+            }}
+            onMouseDown={() => triggerThrough()}
+            style={{
+              position: "absolute",
+              top: 52,
+              left: 0,
+              width: 80,
+              height: 80,
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle at 40% 35%, #a3b18a, #588157)",
+              border: "2px solid #3a5a40",
               color: "white",
-              fontSize: 12,
-              fontWeight: 800,
+              fontSize: 10,
+              fontWeight: 900,
               fontFamily: "system-ui, sans-serif",
               letterSpacing: "0.06em",
               cursor: "pointer",
@@ -904,23 +964,139 @@ export default function GameScene() {
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              gap: 2,
-              userSelect: "none",
-              WebkitUserSelect: "none",
+              gap: 1,
               touchAction: "none",
-              transition: "background 0.08s ease",
-              boxShadow: shootPressed
-                ? "0 4px 24px rgba(239,68,68,0.5)"
-                : "0 4px 16px rgba(239,68,68,0.3)",
+              boxShadow:
+                "0 4px 14px rgba(58,90,64,0.5), inset 0 2px 3px rgba(255,255,255,0.15)",
+              transition: "all 0.06s ease",
             }}
           >
-            <span style={{ fontSize: 20 }}>⚽</span>
-            <span>SHOOT</span>
+            <span>THROUGH</span>
+          </button>
+
+          {/* PASS — bottom-left, dark green */}
+          <button
+            type="button"
+            data-ocid="pass.button"
+            onTouchStart={(e) => {
+              e.preventDefault();
+              triggerPass();
+            }}
+            onMouseDown={() => triggerPass()}
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 36,
+              width: 80,
+              height: 80,
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle at 40% 35%, #52b788, #1b4332)",
+              border: "2px solid #1b4332",
+              color: "white",
+              fontSize: 10,
+              fontWeight: 900,
+              fontFamily: "system-ui, sans-serif",
+              letterSpacing: "0.06em",
+              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 1,
+              touchAction: "none",
+              boxShadow:
+                "0 4px 14px rgba(27,67,50,0.5), inset 0 2px 3px rgba(255,255,255,0.15)",
+              transition: "all 0.06s ease",
+            }}
+          >
+            <span>PASS</span>
+          </button>
+
+          {/* SPRINT & SKILL — bottom-right, bright green */}
+          <button
+            type="button"
+            data-ocid="sprint.button"
+            onTouchStart={(e) => {
+              e.preventDefault();
+              setMobileSprint(true);
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              setMobileSprint(false);
+            }}
+            onMouseDown={() => setMobileSprint(true)}
+            onMouseUp={() => setMobileSprint(false)}
+            onMouseLeave={() => setMobileSprint(false)}
+            style={{
+              position: "absolute",
+              bottom: 0,
+              right: 0,
+              width: 88,
+              height: 88,
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle at 40% 35%, #74c69d, #2d6a4f)",
+              border: "2px solid #1b4332",
+              color: "white",
+              fontSize: 10,
+              fontWeight: 900,
+              fontFamily: "system-ui, sans-serif",
+              letterSpacing: "0.05em",
+              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 1,
+              touchAction: "none",
+              boxShadow:
+                "0 4px 18px rgba(45,106,79,0.55), inset 0 2px 3px rgba(255,255,255,0.2)",
+              transition: "all 0.06s ease",
+              textAlign: "center",
+            }}
+          >
+            <span>SPRINT</span>
+            <span style={{ fontSize: 9, opacity: 0.85 }}>&amp; SKILL</span>
           </button>
         </div>
       )}
 
-      {/* Controls hint */}
+      {/* Shoot charge bar — shows above button cluster when charging */}
+      {gameState === "playing" && charging && (
+        <div
+          style={{
+            position: "fixed",
+            bottom:
+              "max(224px, calc(env(safe-area-inset-bottom, 0px) + 224px))",
+            right: "max(16px, calc(env(safe-area-inset-right, 0px) + 16px))",
+            width: 196,
+            height: 10,
+            borderRadius: 6,
+            background: "rgba(0,0,0,0.5)",
+            border: "1px solid rgba(255,255,255,0.2)",
+            overflow: "hidden",
+            zIndex: 101,
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${Math.round(charge * 100)}%`,
+              borderRadius: 6,
+              background:
+                charge > 0.75
+                  ? "linear-gradient(90deg, #f59e0b, #ef4444)"
+                  : charge > 0.45
+                    ? "linear-gradient(90deg, #fcd34d, #f59e0b)"
+                    : "linear-gradient(90deg, #86efac, #22c55e)",
+              transition: "width 0.04s linear, background 0.2s ease",
+            }}
+          />
+        </div>
+      )}
+
+      {/* Keyboard hint — desktop only */}
       {gameState === "playing" && (
         <div
           style={{
@@ -928,12 +1104,12 @@ export default function GameScene() {
             bottom: "max(16px, env(safe-area-inset-bottom, 16px))",
             left: "50%",
             transform: "translateX(-50%)",
-            color: "white",
-            fontSize: 12,
+            color: "rgba(255,255,255,0.55)",
+            fontSize: 11,
             fontFamily: "system-ui, sans-serif",
             fontWeight: 500,
-            background: "rgba(0,0,0,0.4)",
-            padding: "5px 14px",
+            background: "rgba(0,0,0,0.35)",
+            padding: "4px 12px",
             borderRadius: 20,
             backdropFilter: "blur(8px)",
             pointerEvents: "none",
@@ -942,7 +1118,8 @@ export default function GameScene() {
             zIndex: 10,
           }}
         >
-          WASD · E=pass · Space=shoot · Tab=switch
+          WASD/Joystick · E=pass · Q=through · Space=shoot · Shift=sprint ·
+          Tab=switch
         </div>
       )}
 
@@ -1218,6 +1395,137 @@ export default function GameScene() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Username Modal */}
+      {showUsernameModal && (
+        <div
+          data-ocid="username.modal"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.85)",
+            backdropFilter: "blur(12px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 200,
+            padding: 24,
+          }}
+        >
+          <motion.div
+            initial={{ scale: 0.85, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            style={{
+              background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+              border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: 24,
+              padding: "36px 32px",
+              width: "100%",
+              maxWidth: 380,
+              display: "flex",
+              flexDirection: "column",
+              gap: 20,
+              alignItems: "center",
+            }}
+          >
+            <div style={{ fontSize: 48 }}>⚽</div>
+            <div style={{ textAlign: "center" }}>
+              <div
+                style={{
+                  color: "white",
+                  fontSize: 22,
+                  fontWeight: 900,
+                  fontFamily: "system-ui, sans-serif",
+                }}
+              >
+                Welcome to FC Game!
+              </div>
+              <div
+                style={{
+                  color: "rgba(255,255,255,0.45)",
+                  fontSize: 13,
+                  fontFamily: "system-ui, sans-serif",
+                  marginTop: 6,
+                }}
+              >
+                Choose your username to get started
+              </div>
+            </div>
+            <input
+              type="text"
+              data-ocid="username.input"
+              value={usernameInput}
+              onChange={(e) => setUsernameInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  if (!usernameInput.trim()) {
+                    setUsernameError("Please enter a username");
+                    return;
+                  }
+                  setUsername(usernameInput.trim());
+                  setShowUsernameModal(false);
+                  setUsernameError("");
+                }
+              }}
+              placeholder="e.g. Ronaldo7"
+              maxLength={20}
+              style={{
+                width: "100%",
+                background: "rgba(255,255,255,0.07)",
+                border: "1.5px solid rgba(255,255,255,0.2)",
+                borderRadius: 12,
+                padding: "14px 16px",
+                color: "white",
+                fontSize: 16,
+                fontFamily: "system-ui, sans-serif",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+            {usernameError && (
+              <div
+                data-ocid="username.error_state"
+                style={{
+                  color: "#f87171",
+                  fontSize: 12,
+                  fontFamily: "system-ui, sans-serif",
+                }}
+              >
+                {usernameError}
+              </div>
+            )}
+            <button
+              type="button"
+              data-ocid="username.submit_button"
+              onClick={() => {
+                if (!usernameInput.trim()) {
+                  setUsernameError("Please enter a username");
+                  return;
+                }
+                setUsername(usernameInput.trim());
+                setShowUsernameModal(false);
+                setUsernameError("");
+              }}
+              style={{
+                width: "100%",
+                background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+                color: "white",
+                border: "none",
+                borderRadius: 40,
+                padding: "16px",
+                fontSize: 16,
+                fontWeight: 900,
+                fontFamily: "system-ui, sans-serif",
+                cursor: "pointer",
+                minHeight: 50,
+                boxShadow: "0 6px 20px rgba(59,130,246,0.4)",
+              }}
+            >
+              Let's Play!
+            </button>
+          </motion.div>
+        </div>
+      )}
 
       {/* Footer */}
       <div

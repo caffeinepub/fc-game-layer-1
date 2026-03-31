@@ -16,8 +16,8 @@ const RARITY_COLORS: Record<string, string> = {
   legendary: "#fbbf24",
 };
 
-const BUY_PRICE = (ovr: number) => ovr * 180;
-const SELL_PRICE = (ovr: number) => ovr * 150;
+const BUY_PRICE = (ovr: number) => Math.round(300 * 2.8 ** ((ovr - 60) / 10));
+const SELL_PRICE = (ovr: number) => Math.round(BUY_PRICE(ovr) * 0.35);
 
 type SubTab = "buy" | "sell";
 type PosFilter = "ALL" | "GK" | "DEF" | "MID" | "FWD";

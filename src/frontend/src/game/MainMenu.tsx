@@ -2,11 +2,18 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import EventsScreen from "./EventsScreen";
 import MarketScreen from "./MarketScreen";
+import MultiplayerScreen from "./MultiplayerScreen";
 import PackSystem from "./PackSystem";
 import ProgressScreen from "./ProgressScreen";
 import SaveScreen from "./SaveScreen";
 import SquadScreen from "./SquadScreen";
-import { getCoins, getGems, getRank, getRankName } from "./storage";
+import {
+  getCoins,
+  getGems,
+  getRank,
+  getRankName,
+  getUsername,
+} from "./storage";
 
 type Difficulty = "easy" | "medium" | "hard";
 type Tab =
@@ -16,6 +23,7 @@ type Tab =
   | "market"
   | "progress"
   | "events"
+  | "multiplayer"
   | "save";
 
 const DIFFICULTY_COLORS: Record<Difficulty, string> = {
@@ -82,6 +90,8 @@ export default function MainMenu({ onPlay }: MainMenuProps) {
   const rank = getRank();
   const rankName = getRankName(rank);
 
+  const username = getUsername();
+
   const refreshCurrency = () => {
     setGems(getGems());
     setCoins(getCoins());
@@ -94,6 +104,7 @@ export default function MainMenu({ onPlay }: MainMenuProps) {
     { id: "market", label: "Market", emoji: "🛒" },
     { id: "progress", label: "Progress", emoji: "📈" },
     { id: "events", label: "Events", emoji: "🎉" },
+    { id: "multiplayer", label: "Multiplayer", emoji: "🌐" },
     { id: "save", label: "Save", emoji: "💾" },
   ];
 
@@ -144,7 +155,30 @@ export default function MainMenu({ onPlay }: MainMenuProps) {
             FC Game
           </span>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
+          {username && (
+            <div
+              style={{
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.18)",
+                borderRadius: 20,
+                padding: "5px 12px",
+                color: "rgba(255,255,255,0.85)",
+                fontSize: 13,
+                fontWeight: 700,
+                fontFamily: "system-ui, sans-serif",
+              }}
+            >
+              👤 {username}
+            </div>
+          )}
           <div
             style={{
               background: "rgba(251,191,36,0.15)",
@@ -250,6 +284,9 @@ export default function MainMenu({ onPlay }: MainMenuProps) {
         {tab === "progress" && <ProgressScreen />}
         {tab === "events" && (
           <EventsScreen onTrainingMatch={() => onPlay(difficulty, "blue")} />
+        )}
+        {tab === "multiplayer" && (
+          <MultiplayerScreen onStartH2H={() => onPlay(difficulty, "blue")} />
         )}
         {tab === "save" && <SaveScreen onImported={() => refreshCurrency()} />}
       </div>

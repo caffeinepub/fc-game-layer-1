@@ -11,4 +11,10 @@ export interface backendInterface {
     deleteMyProgress(): Promise<void>;
     loadProgress(): Promise<string | null>;
     saveProgress(progressDataString: string): Promise<void>;
+    createRoom(code: string, stateJson: string): Promise<boolean>;
+    updateRoom(code: string, stateJson: string): Promise<void>;
+    getRoom(code: string): Promise<string | null>;
+    deleteRoom(code: string): Promise<void>;
+    setChatMessages(code: string, chatJson: string): Promise<void>;
+    getChatMessages(code: string): Promise<string>;
 }

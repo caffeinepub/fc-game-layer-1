@@ -93,50 +93,59 @@ export interface backendInterface {
     deleteMyProgress(): Promise<void>;
     loadProgress(): Promise<string | null>;
     saveProgress(progressDataString: string): Promise<void>;
+    createRoom(code: string, stateJson: string): Promise<boolean>;
+    updateRoom(code: string, stateJson: string): Promise<void>;
+    getRoom(code: string): Promise<string | null>;
+    deleteRoom(code: string): Promise<void>;
+    setChatMessages(code: string, chatJson: string): Promise<void>;
+    getChatMessages(code: string): Promise<string>;
 }
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async deleteMyProgress(): Promise<void> {
         if (this.processError) {
-            try {
-                const result = await this.actor.deleteMyProgress();
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.deleteMyProgress();
-            return result;
-        }
+            try { return await this.actor.deleteMyProgress(); } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { return await this.actor.deleteMyProgress(); }
     }
     async loadProgress(): Promise<string | null> {
         if (this.processError) {
-            try {
-                const result = await this.actor.loadProgress();
-                return from_candid_opt_n1(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.loadProgress();
-            return from_candid_opt_n1(this._uploadFile, this._downloadFile, result);
-        }
+            try { const r = await this.actor.loadProgress(); return from_candid_opt_n1(this._uploadFile, this._downloadFile, r); } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const r = await this.actor.loadProgress(); return from_candid_opt_n1(this._uploadFile, this._downloadFile, r); }
     }
     async saveProgress(arg0: string): Promise<void> {
         if (this.processError) {
-            try {
-                const result = await this.actor.saveProgress(arg0);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.saveProgress(arg0);
-            return result;
-        }
+            try { return await this.actor.saveProgress(arg0); } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { return await this.actor.saveProgress(arg0); }
+    }
+    async createRoom(code: string, stateJson: string): Promise<boolean> {
+        if (this.processError) {
+            try { return await this.actor.createRoom(code, stateJson); } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { return await this.actor.createRoom(code, stateJson); }
+    }
+    async updateRoom(code: string, stateJson: string): Promise<void> {
+        if (this.processError) {
+            try { return await this.actor.updateRoom(code, stateJson); } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { return await this.actor.updateRoom(code, stateJson); }
+    }
+    async getRoom(code: string): Promise<string | null> {
+        if (this.processError) {
+            try { const r = await this.actor.getRoom(code); return from_candid_opt_n1(this._uploadFile, this._downloadFile, r); } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { const r = await this.actor.getRoom(code); return from_candid_opt_n1(this._uploadFile, this._downloadFile, r); }
+    }
+    async deleteRoom(code: string): Promise<void> {
+        if (this.processError) {
+            try { return await this.actor.deleteRoom(code); } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { return await this.actor.deleteRoom(code); }
+    }
+    async setChatMessages(code: string, chatJson: string): Promise<void> {
+        if (this.processError) {
+            try { return await this.actor.setChatMessages(code, chatJson); } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { return await this.actor.setChatMessages(code, chatJson); }
+    }
+    async getChatMessages(code: string): Promise<string> {
+        if (this.processError) {
+            try { return await this.actor.getChatMessages(code); } catch (e) { this.processError(e); throw new Error("unreachable"); }
+        } else { return await this.actor.getChatMessages(code); }
     }
 }
 function from_candid_opt_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {

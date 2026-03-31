@@ -76,6 +76,7 @@ interface TeamPlayerProps {
   tacticMultiplier?: number;
   role?: "GK" | "DEF" | "MID" | "FWD";
   opponentRefs?: React.RefObject<TeamPlayerHandle | null>[];
+  ovrMultiplier?: number;
 }
 
 const TeamPlayer = forwardRef<TeamPlayerHandle, TeamPlayerProps>(
@@ -94,6 +95,7 @@ const TeamPlayer = forwardRef<TeamPlayerHandle, TeamPlayerProps>(
       tacticMultiplier = 1,
       role = "MID",
       opponentRefs,
+      ovrMultiplier = 1.0,
     },
     ref,
   ) {
@@ -207,6 +209,7 @@ const TeamPlayer = forwardRef<TeamPlayerHandle, TeamPlayerProps>(
             now,
             lastKickTime,
             ballRef,
+            ovrMultiplier,
           );
         } else {
           // Determine if this player is closest opponent to ball
@@ -379,14 +382,15 @@ function _runTeammateAI(
   now: number,
   lastKickTime: React.MutableRefObject<number>,
   ballRef: React.RefObject<BallHandle | null>,
+  ovrMultiplier: number,
 ) {
   let targetPos: THREE.Vector3;
-  let SPEED = 8 * tacticMultiplier;
+  let SPEED = 8 * tacticMultiplier * ovrMultiplier;
   let kickCooldown = 350;
   const anchor = new THREE.Vector3(startPos.x, 0, startPos.z);
 
   if (role === "GK") {
-    SPEED = 9;
+    SPEED = 9 * ovrMultiplier;
     kickCooldown = 500;
     // Blue GK only rushes when ball is very close to blue goal (z > 22)
     if (distToBall < 5 && ballPos.z > 22) {
@@ -397,7 +401,7 @@ function _runTeammateAI(
       targetPos = diff2.length() > 3 ? anchor.clone() : myPos.clone();
     }
   } else if (role === "DEF") {
-    SPEED = 7 * tacticMultiplier;
+    SPEED = 7 * tacticMultiplier * ovrMultiplier;
     kickCooldown = 450;
     if (ballPos.z < 0) {
       targetPos = anchor.clone();
@@ -409,7 +413,7 @@ function _runTeammateAI(
       targetPos = mid;
     }
   } else if (role === "MID") {
-    SPEED = 8 * tacticMultiplier;
+    SPEED = 8 * tacticMultiplier * ovrMultiplier;
     kickCooldown = 350;
     if (distToBall < 10) {
       targetPos = ballPos.clone();
@@ -420,7 +424,7 @@ function _runTeammateAI(
     }
   } else {
     // FWD
-    SPEED = 9 * tacticMultiplier;
+    SPEED = 9 * tacticMultiplier * ovrMultiplier;
     kickCooldown = 300;
     const selfHasPossession = distToBall < 2.5;
     if (ballPos.z < 5) {
@@ -456,7 +460,10 @@ function _runTeammateAI(
       kickDir.x += (Math.random() - 0.5) * 0.15;
     }
     kickDir.normalize();
-    ballRef.current?.kick(kickDir, 0.5 + Math.random() * 0.35);
+    ballRef.current?.kick(
+      kickDir,
+      Math.min(1.0, (0.5 + Math.random() * 0.35) * ovrMultiplier),
+    );
     lastKickTime.current = now;
   }
 }
@@ -586,40 +593,53 @@ function _runOpponentAI(
     const worldPos = new THREE.Vector3();
     group.getWorldPosition(worldPos);
 
+    // Attacking third: z > 18 for red team (they attack toward positive z / HALF_H).
+    const inAttackingThird = worldPos.z > 18;
+    const shouldShootDirectly =
+      (role === "FWD" && inAttackingThird) ||
+      (role === "FWD" && distToBall < 2 && worldPos.z > 8);
+
+    const buildShootDir = (): THREE.Vector3 => {
+      const goalCenter = new THREE.Vector3(0, 0, OPPONENT_ATTACK_Z);
+      const dir = new THREE.Vector3()
+        .subVectors(goalCenter, worldPos)
+        .normalize();
+      if (difficulty === "easy") {
+        dir.x += (Math.random() - 0.5) * 1.2;
+      } else if (difficulty === "medium") {
+        dir.x +=
+          (Math.random() - 0.5) *
+          (role === "FWD" && inAttackingThird ? 0.25 : 0.5);
+      } else {
+        if (role === "FWD" && inAttackingThird) {
+          dir.x += (Math.random() - 0.5) * 0.1;
+        } else if (role === "GK" || role === "DEF") {
+          dir.x += (Math.random() - 0.5) * 0.6;
+        } else if (role === "MID") {
+          dir.x += (Math.random() - 0.5) * 0.25;
+        }
+      }
+      return dir.normalize();
+    };
+
     let kickDir: THREE.Vector3;
 
     if (isClosestToBall) {
-      // Try to find an advanced teammate to pass to
-      const passTarget = _findPassTarget(worldPos, opponentRefs);
-      if (passTarget) {
-        // Pass toward that teammate with a small lead
-        kickDir = new THREE.Vector3()
-          .subVectors(passTarget, worldPos)
-          .normalize();
-        // Slight random spread on passes
-        kickDir.x += (Math.random() - 0.5) * 0.18;
-        kickDir.normalize();
-      } else {
-        // Shoot at goal
-        const goalCenter = new THREE.Vector3(0, 0, OPPONENT_ATTACK_Z);
-        kickDir = new THREE.Vector3()
-          .subVectors(goalCenter, worldPos)
-          .normalize();
-        if (difficulty === "easy") {
-          kickDir.x += (Math.random() - 0.5) * 1.2;
-        } else if (difficulty === "medium") {
-          kickDir.x += (Math.random() - 0.5) * 0.5;
+      if (!shouldShootDirectly) {
+        const passTarget = _findPassTarget(worldPos, opponentRefs);
+        if (passTarget) {
+          kickDir = new THREE.Vector3()
+            .subVectors(passTarget, worldPos)
+            .normalize();
+          kickDir.x += (Math.random() - 0.5) * 0.18;
+          kickDir.normalize();
         } else {
-          if (role === "GK" || role === "DEF") {
-            kickDir.x += (Math.random() - 0.5) * 0.6;
-          } else if (role === "MID") {
-            kickDir.x += (Math.random() - 0.5) * 0.25;
-          }
+          kickDir = buildShootDir();
         }
-        kickDir.normalize();
+      } else {
+        kickDir = buildShootDir();
       }
     } else {
-      // Non-ball-chaser clearing: punt toward goal / forward
       const goalCenter = new THREE.Vector3(0, 0, OPPONENT_ATTACK_Z);
       kickDir = new THREE.Vector3()
         .subVectors(goalCenter, worldPos)
@@ -631,7 +651,8 @@ function _runOpponentAI(
     const power =
       settings.kickPowerMin +
       Math.random() * (settings.kickPowerMax - settings.kickPowerMin);
-    ballRef.current?.kick(kickDir, power);
+    const finalPower = shouldShootDirectly ? Math.min(power * 1.3, 1.0) : power;
+    ballRef.current?.kick(kickDir, finalPower);
     lastKickTime.current = now;
   }
 }

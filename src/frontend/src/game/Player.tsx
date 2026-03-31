@@ -7,11 +7,14 @@ import { HALF_H, HALF_W } from "./Pitch";
 import {
   consumeKickRelease,
   consumePassTrigger,
+  consumeThroughTrigger,
   getChargeAmount,
   getDirection,
+  isSprintActive,
 } from "./useInput";
 
 const PLAYER_SPEED = 10;
+const SPRINT_MULTIPLIER = 1.65;
 const PLAYER_RADIUS = 0.5;
 const TORSO_HEIGHT = 1.3;
 const TORSO_BOTTOM_Y = 1.0;
@@ -36,6 +39,7 @@ interface PlayerProps {
   isAI?: boolean;
   jerseyColor?: string;
   shortsColor?: string;
+  ovrMultiplier?: number;
 }
 
 const Player = forwardRef<PlayerHandle, PlayerProps>(function Player(
@@ -45,6 +49,7 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(function Player(
     isAI = false,
     jerseyColor = "#1565c0",
     shortsColor = "#0d47a1",
+    ovrMultiplier = 1.0,
   },
   ref,
 ) {
@@ -84,8 +89,11 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(function Player(
       moving = dir.x !== 0 || dir.z !== 0;
 
       if (moving) {
-        group.position.x += dir.x * PLAYER_SPEED * delta;
-        group.position.z += dir.z * PLAYER_SPEED * delta;
+        const sprint = isSprintActive() ? SPRINT_MULTIPLIER : 1.0;
+        group.position.x +=
+          dir.x * PLAYER_SPEED * ovrMultiplier * sprint * delta;
+        group.position.z +=
+          dir.z * PLAYER_SPEED * ovrMultiplier * sprint * delta;
         group.position.x = THREE.MathUtils.clamp(
           group.position.x,
           -(HALF_W - PLAYER_RADIUS),
@@ -122,18 +130,27 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(function Player(
         }
       }
 
+      // SHOOT: charged kick
       if (consumeKickRelease()) {
         const power = getChargeAmount();
         ballRef?.current?.kick(facingRef.current.clone(), power);
       }
+
+      // PASS: short ground pass
       if (consumePassTrigger()) {
         ballRef?.current?.kick(facingRef.current.clone(), 0.35);
       }
+
+      // THROUGH: driven pass into space (higher power, stays low)
+      if (consumeThroughTrigger()) {
+        ballRef?.current?.kick(facingRef.current.clone(), 0.62);
+      }
     }
 
-    // Leg animation
+    // Leg animation — faster when sprinting
+    const animSpeed = isSprintActive() ? 16 : 10;
     if (moving) {
-      walkPhaseRef.current += delta * 10;
+      walkPhaseRef.current += delta * animSpeed;
     } else {
       walkPhaseRef.current *= 0.82;
     }

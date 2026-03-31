@@ -105,45 +105,53 @@ const Ball = forwardRef<BallHandle, BallProps>(function Ball(
     position.current.z += velocity.current.z * delta;
     position.current.y = BALL_RADIUS;
 
+    // ── Goal Detection ────────────────────────────────────────────────────
+    // Goals are at the z-axis end lines (z < -HALF_H and z > HALF_H).
+    // Blue team attacks toward negative z → player (blue) scores at z < -HALF_H.
+    // Red team attacks toward positive z → AI (red) scores at z > HALF_H.
     if (!goalScored.current) {
-      const bz = Math.abs(position.current.z);
-      if (
-        position.current.x > HALF_W &&
-        bz < GOAL_WIDTH / 2 &&
-        position.current.y < GOAL_HEIGHT + 0.5
-      ) {
+      const bx = Math.abs(position.current.x);
+      const inGoalMouth =
+        bx < GOAL_WIDTH / 2 && position.current.y < GOAL_HEIGHT + 0.5;
+
+      if (position.current.z < -HALF_H && inGoalMouth) {
         goalScored.current = true;
         onGoal?.("player");
         return;
       }
-      if (
-        position.current.x < -HALF_W &&
-        bz < GOAL_WIDTH / 2 &&
-        position.current.y < GOAL_HEIGHT + 0.5
-      ) {
+      if (position.current.z > HALF_H && inGoalMouth) {
         goalScored.current = true;
         onGoal?.("ai");
         return;
       }
     }
 
-    const bx = HALF_W - BALL_RADIUS;
+    // ── Boundary clamping ─────────────────────────────────────────────────
+    const bx2 = HALF_W - BALL_RADIUS;
     const bz2 = HALF_H - BALL_RADIUS;
 
-    if (position.current.x < -bx) {
-      position.current.x = -bx;
+    // Left / right sidelines — always bounce
+    if (position.current.x < -bx2) {
+      position.current.x = -bx2;
       velocity.current.x = Math.abs(velocity.current.x) * BOUNCE_DAMPING;
-    } else if (position.current.x > bx) {
-      position.current.x = bx;
+    } else if (position.current.x > bx2) {
+      position.current.x = bx2;
       velocity.current.x = -Math.abs(velocity.current.x) * BOUNCE_DAMPING;
     }
 
+    // End lines — bounce only if ball is outside goal mouth
+    const inGoalMouth = Math.abs(position.current.x) < GOAL_WIDTH / 2;
     if (position.current.z < -bz2) {
-      position.current.z = -bz2;
-      velocity.current.z = Math.abs(velocity.current.z) * BOUNCE_DAMPING;
+      if (!inGoalMouth) {
+        position.current.z = -bz2;
+        velocity.current.z = Math.abs(velocity.current.z) * BOUNCE_DAMPING;
+      }
+      // If in goal mouth but not yet past HALF_H, just let ball roll
     } else if (position.current.z > bz2) {
-      position.current.z = bz2;
-      velocity.current.z = -Math.abs(velocity.current.z) * BOUNCE_DAMPING;
+      if (!inGoalMouth) {
+        position.current.z = bz2;
+        velocity.current.z = -Math.abs(velocity.current.z) * BOUNCE_DAMPING;
+      }
     }
 
     mesh.position.copy(position.current);

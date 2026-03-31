@@ -522,3 +522,17 @@ export function getLastSavedTimestamp(): string {
 export function updateLastSavedTimestamp(): void {
   localStorage.setItem("fc_save_timestamp", new Date().toISOString());
 }
+
+// ─── Username ─────────────────────────────────────────────────────────────────
+
+export function getUsername(): string {
+  return localStorage.getItem("fc_username") || "";
+}
+
+export function setUsername(name: string): void {
+  localStorage.setItem("fc_username", name.trim().slice(0, 20));
+}
+
+export function hasUsername(): boolean {
+  return !!localStorage.getItem("fc_username");
+}

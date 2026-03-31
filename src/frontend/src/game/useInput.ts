@@ -6,6 +6,7 @@ const keys = {
   down: false,
   left: false,
   right: false,
+  sprint: false,
 };
 
 let joystickDir = { x: 0, z: 0 };
@@ -20,6 +21,12 @@ const CHARGE_DURATION_MS = 800;
 // Pass state
 let passTriggered = false;
 
+// Through ball state
+let throughTriggered = false;
+
+// Sprint state (mobile)
+let sprintActive = false;
+
 export function triggerPass() {
   passTriggered = true;
 }
@@ -30,6 +37,26 @@ export function consumePassTrigger(): boolean {
     return true;
   }
   return false;
+}
+
+export function triggerThrough() {
+  throughTriggered = true;
+}
+
+export function consumeThroughTrigger(): boolean {
+  if (throughTriggered) {
+    throughTriggered = false;
+    return true;
+  }
+  return false;
+}
+
+export function setMobileSprint(active: boolean) {
+  sprintActive = active;
+}
+
+export function isSprintActive(): boolean {
+  return sprintActive || keys.sprint;
 }
 
 export function setJoystickDirection(x: number, z: number) {
@@ -88,6 +115,13 @@ export function useInput() {
         case "KeyE":
           triggerPass();
           break;
+        case "KeyQ":
+          triggerThrough();
+          break;
+        case "ShiftLeft":
+        case "ShiftRight":
+          keys.sprint = true;
+          break;
         case "Space":
           if (!kickCharging) {
             kickCharging = true;
@@ -111,6 +145,10 @@ export function useInput() {
           break;
         case "KeyD":
           keys.right = false;
+          break;
+        case "ShiftLeft":
+        case "ShiftRight":
+          keys.sprint = false;
           break;
         case "Space":
           if (kickCharging) {

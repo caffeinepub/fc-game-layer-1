@@ -14,6 +14,12 @@ export interface _SERVICE {
   'deleteMyProgress' : ActorMethod<[], undefined>,
   'loadProgress' : ActorMethod<[], [] | [string]>,
   'saveProgress' : ActorMethod<[string], undefined>,
+  'createRoom' : ActorMethod<[string, string], boolean>,
+  'updateRoom' : ActorMethod<[string, string], undefined>,
+  'getRoom' : ActorMethod<[string], [] | [string]>,
+  'deleteRoom' : ActorMethod<[string], undefined>,
+  'setChatMessages' : ActorMethod<[string, string], undefined>,
+  'getChatMessages' : ActorMethod<[string], string>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

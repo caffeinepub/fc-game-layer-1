@@ -12,6 +12,12 @@ export const idlService = IDL.Service({
   'deleteMyProgress' : IDL.Func([], [], []),
   'loadProgress' : IDL.Func([], [IDL.Opt(IDL.Text)], []),
   'saveProgress' : IDL.Func([IDL.Text], [], []),
+  'createRoom' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
+  'updateRoom' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'getRoom' : IDL.Func([IDL.Text], [IDL.Opt(IDL.Text)], ['query']),
+  'deleteRoom' : IDL.Func([IDL.Text], [], []),
+  'setChatMessages' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'getChatMessages' : IDL.Func([IDL.Text], [IDL.Text], ['query']),
 });
 
 export const idlInitArgs = [];
@@ -21,6 +27,12 @@ export const idlFactory = ({ IDL }) => {
     'deleteMyProgress' : IDL.Func([], [], []),
     'loadProgress' : IDL.Func([], [IDL.Opt(IDL.Text)], []),
     'saveProgress' : IDL.Func([IDL.Text], [], []),
+    'createRoom' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
+    'updateRoom' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'getRoom' : IDL.Func([IDL.Text], [IDL.Opt(IDL.Text)], ['query']),
+    'deleteRoom' : IDL.Func([IDL.Text], [], []),
+    'setChatMessages' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'getChatMessages' : IDL.Func([IDL.Text], [IDL.Text], ['query']),
   });
 };
 

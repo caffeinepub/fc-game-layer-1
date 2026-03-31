@@ -6,7 +6,7 @@ const HALF_H = PITCH_H / 2;
 const GOAL_WIDTH = 7.32;
 const GOAL_HEIGHT = 2.44;
 const GOAL_DEPTH = 2.0;
-const POST_RADIUS = 0.12;
+const POST_RADIUS = 0.15;
 
 const PA_DEPTH = 16.5;
 const PA_WIDTH = 40.32;
@@ -47,38 +47,110 @@ function Stripe({ index }: { index: number }) {
   );
 }
 
+/**
+ * Goals are at z = ±HALF_H (the end lines).
+ * side=1  → z = +HALF_H  (AI defends, player attacks)
+ * side=-1 → z = -HALF_H  (Player defends, AI attacks)
+ * This matches Ball.tsx goal detection logic.
+ */
 function Goal({ side }: { side: 1 | -1 }) {
-  const xBack = side * (HALF_W + GOAL_DEPTH / 2);
-  const y = GOAL_HEIGHT / 2;
+  const zLine = side * HALF_H; // front face of goal (on pitch end line)
+  const zBack = side * (HALF_H + GOAL_DEPTH); // back of net
+  const zMid = side * (HALF_H + GOAL_DEPTH / 2); // centre of net volume
+  const halfW = GOAL_WIDTH / 2;
+  const postY = GOAL_HEIGHT / 2;
 
   return (
     <group>
-      <mesh position={[side * HALF_W, y, -GOAL_WIDTH / 2]}>
-        <cylinderGeometry args={[POST_RADIUS, POST_RADIUS, GOAL_HEIGHT, 8]} />
-        <meshStandardMaterial color="white" />
+      {/* ── Front uprights ── */}
+      <mesh position={[-halfW, postY, zLine]}>
+        <cylinderGeometry args={[POST_RADIUS, POST_RADIUS, GOAL_HEIGHT, 12]} />
+        <meshStandardMaterial color="white" metalness={0.5} roughness={0.3} />
       </mesh>
-      <mesh position={[side * HALF_W, y, GOAL_WIDTH / 2]}>
-        <cylinderGeometry args={[POST_RADIUS, POST_RADIUS, GOAL_HEIGHT, 8]} />
-        <meshStandardMaterial color="white" />
+      <mesh position={[halfW, postY, zLine]}>
+        <cylinderGeometry args={[POST_RADIUS, POST_RADIUS, GOAL_HEIGHT, 12]} />
+        <meshStandardMaterial color="white" metalness={0.5} roughness={0.3} />
       </mesh>
+
+      {/* ── Crossbar (runs along X) ── */}
+      <mesh position={[0, GOAL_HEIGHT, zLine]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry
+          args={[POST_RADIUS, POST_RADIUS, GOAL_WIDTH + POST_RADIUS * 2, 12]}
+        />
+        <meshStandardMaterial color="white" metalness={0.5} roughness={0.3} />
+      </mesh>
+
+      {/* ── Back uprights ── */}
+      <mesh position={[-halfW, postY, zBack]}>
+        <cylinderGeometry
+          args={[POST_RADIUS * 0.75, POST_RADIUS * 0.75, GOAL_HEIGHT, 8]}
+        />
+        <meshStandardMaterial color="white" metalness={0.4} roughness={0.4} />
+      </mesh>
+      <mesh position={[halfW, postY, zBack]}>
+        <cylinderGeometry
+          args={[POST_RADIUS * 0.75, POST_RADIUS * 0.75, GOAL_HEIGHT, 8]}
+        />
+        <meshStandardMaterial color="white" metalness={0.4} roughness={0.4} />
+      </mesh>
+
+      {/* ── Back crossbar ── */}
+      <mesh position={[0, GOAL_HEIGHT, zBack]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry
+          args={[POST_RADIUS * 0.75, POST_RADIUS * 0.75, GOAL_WIDTH, 8]}
+        />
+        <meshStandardMaterial color="white" metalness={0.4} roughness={0.4} />
+      </mesh>
+
+      {/* ── Top side bars (connect front to back at crossbar height) ── */}
       <mesh
-        position={[side * HALF_W, GOAL_HEIGHT, 0]}
-        rotation={[0, 0, Math.PI / 2]}
+        position={[-halfW, GOAL_HEIGHT, zMid]}
+        rotation={[Math.PI / 2, 0, 0]}
       >
         <cylinderGeometry
-          args={[POST_RADIUS, POST_RADIUS, GOAL_WIDTH + POST_RADIUS * 2, 8]}
+          args={[POST_RADIUS * 0.75, POST_RADIUS * 0.75, GOAL_DEPTH, 8]}
         />
-        <meshStandardMaterial color="white" />
+        <meshStandardMaterial color="white" metalness={0.4} roughness={0.4} />
       </mesh>
-      {/* Net */}
-      <mesh position={[xBack, y, 0]}>
-        <boxGeometry args={[GOAL_DEPTH, GOAL_HEIGHT, GOAL_WIDTH]} />
+      <mesh
+        position={[halfW, GOAL_HEIGHT, zMid]}
+        rotation={[Math.PI / 2, 0, 0]}
+      >
+        <cylinderGeometry
+          args={[POST_RADIUS * 0.75, POST_RADIUS * 0.75, GOAL_DEPTH, 8]}
+        />
+        <meshStandardMaterial color="white" metalness={0.4} roughness={0.4} />
+      </mesh>
+
+      {/* ── Bottom side bars (ground level) ── */}
+      <mesh position={[-halfW, 0.05, zMid]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry
+          args={[POST_RADIUS * 0.5, POST_RADIUS * 0.5, GOAL_DEPTH, 8]}
+        />
+        <meshStandardMaterial color="white" metalness={0.3} roughness={0.5} />
+      </mesh>
+      <mesh position={[halfW, 0.05, zMid]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry
+          args={[POST_RADIUS * 0.5, POST_RADIUS * 0.5, GOAL_DEPTH, 8]}
+        />
+        <meshStandardMaterial color="white" metalness={0.3} roughness={0.5} />
+      </mesh>
+
+      {/* ── Net ── */}
+      <mesh position={[0, postY, zMid]}>
+        <boxGeometry args={[GOAL_WIDTH, GOAL_HEIGHT, GOAL_DEPTH]} />
         <meshStandardMaterial
           color="white"
           wireframe
-          opacity={0.25}
+          opacity={0.35}
           transparent
         />
+      </mesh>
+
+      {/* ── Goal line flash strip (subtle) ── */}
+      <mesh position={[0, 0.015, zLine]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[GOAL_WIDTH, 0.15]} />
+        <meshStandardMaterial color="white" opacity={0.6} transparent />
       </mesh>
     </group>
   );
@@ -126,7 +198,7 @@ export default function Pitch() {
         <meshStandardMaterial color="white" />
       </mesh>
 
-      {/* Left penalty area */}
+      {/* Left penalty area (x < 0 side) */}
       <Line
         position={[-HALF_W + PA_DEPTH / 2, 0.01, -PA_WIDTH / 2]}
         width={PA_DEPTH}
@@ -194,7 +266,7 @@ export default function Pitch() {
         depth={GA_WIDTH}
       />
 
-      {/* Goals */}
+      {/* Goals — correctly placed at z-axis end lines */}
       <Goal side={-1} />
       <Goal side={1} />
 
